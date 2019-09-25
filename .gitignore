@@ -1,0 +1,5 @@
+# Rust (Cargo) files
+/target/
+
+# CLion files
+/.idea/
