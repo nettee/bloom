@@ -1,5 +1,5 @@
-# Rust (Cargo) files
-/target/
-
-# CLion files
+# PyCharm files
 /.idea/
+
+# Python files
+__pycache__/
