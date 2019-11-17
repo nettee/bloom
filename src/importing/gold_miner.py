@@ -1,9 +1,10 @@
+from importing.base import Fetcher, Sanitizer, Dumper, Importer
 from model.markdown import MdDoc
 
 
 # Import loop
 # fetch -> sanitize -> save
-class FileFetcher:
+class FileFetcher(Fetcher):
 
     def fetch(self, path):
         f = open(path, 'r')
@@ -11,7 +12,7 @@ class FileFetcher:
         return MdDoc(text)
 
 
-class GoldMinerSanitizer:
+class GoldMinerSanitizer(Sanitizer):
 
     def sanitize(self, doc):
         print('before sanitize:', doc)
@@ -33,7 +34,7 @@ class GoldMinerSanitizer:
         return len(line) == 0 or line == '---' or line.startswith('>')
 
 
-class FileDumper:
+class FileDumper(Dumper):
 
     def dump(self, doc):
         f = open('a.md', 'w')
@@ -41,13 +42,13 @@ class FileDumper:
         f.close()
 
 
-class GoldMinerFileImporter:
+class GoldMinerFileImporter(Importer):
 
-    def import_(self, file):
-        doc = FileFetcher().fetch(file)
-        doc2 = GoldMinerSanitizer().sanitize(doc)
-        FileDumper().dump(doc2)
+    def __init__(self):
+        self.fetcher = FileFetcher()
+        self.sanitizer = GoldMinerSanitizer()
+        self.dumper = FileDumper()
 
 
 def import_from_file(file):
-    GoldMinerFileImporter().import_(file)
+    GoldMinerFileImporter().import_it(file)
