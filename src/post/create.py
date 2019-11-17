@@ -1,5 +1,8 @@
 import re
+from datetime import datetime
 from pathlib import Path
+
+import toml
 
 from base import config
 
@@ -23,3 +26,18 @@ def create_post(title):
 
     post_img_dir = post_dir / 'img'
     post_img_dir.mkdir()
+
+    meta = {
+        'meta': {
+            'name': name,
+            'title': title,
+            'create_datetime': datetime.now(),
+            'category': 'Default',
+            'source': 'local',
+            'labels': [],
+        },
+    }
+
+    post_meta = post_dir / 'meta.toml'
+    with post_meta.open('w') as f:
+        toml.dump(meta, f)
