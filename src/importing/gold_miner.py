@@ -1,5 +1,5 @@
 from importing.base import Fetcher, Sanitizer, Dumper, Importer
-from model.markdown import MdDoc
+from model.markdown import MdDoc, TextMdDoc
 
 
 # Import loop
@@ -9,21 +9,19 @@ class FileFetcher(Fetcher):
     def fetch(self, path):
         f = open(path, 'r')
         text = f.read()
-        return MdDoc(text)
+        return TextMdDoc(text)
 
 
 class GoldMinerSanitizer(Sanitizer):
 
     def sanitize(self, doc):
-        print('before sanitize:', doc)
         lines = doc.lines()
+        # remove gold-miner info at header and footer
         while self.is_redundant_head(lines[0]):
             lines.pop(0)
         while self.is_redundant_foot(lines[-1]):
             lines.pop()
-        doc2 = MdDoc('\n'.join(lines))
-        print('after sanitize:', doc2)
-        return doc2
+        return TextMdDoc.from_lines(lines)
 
     @staticmethod
     def is_redundant_head(line):
@@ -38,7 +36,7 @@ class FileDumper(Dumper):
 
     def dump(self, doc):
         f = open('a.md', 'w')
-        print(doc, file=f)
+        print(str(doc), file=f)
         f.close()
 
 

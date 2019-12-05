@@ -11,6 +11,7 @@ def bloom():
 @click.command(name='import')
 @click.argument('file')
 def import_command(file):
+    # TODO add import source
     importing.gold_miner.import_from_file(file)
 
 
