@@ -25,7 +25,8 @@ class Dumper(metaclass=ABCMeta):
 class Importer(metaclass=ABCMeta):
 
     def import_it(self, source):
-        print(f'fetcher: {self.fetcher}, sanitizer: {self.sanitizer}, dumper: {self.dumper}')
+        print(f'fetcher: {self.fetcher}, sanitizer: {self.sanitizers}, dumper: {self.dumper}')
         doc = self.fetcher.fetch(source)
-        doc2 = self.sanitizer.sanitize(doc)
-        self.dumper.dump(doc2)
+        for sanitizer in self.sanitizers:
+            doc = sanitizer.sanitize(doc)
+        self.dumper.dump(doc)

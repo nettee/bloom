@@ -44,7 +44,7 @@ class GoldMinerFileImporter(Importer):
 
     def __init__(self):
         self.fetcher = FileFetcher()
-        self.sanitizer = GoldMinerSanitizer()
+        self.sanitizers = [GoldMinerSanitizer()]
         self.dumper = FileDumper()
 
 
