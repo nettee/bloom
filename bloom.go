@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"github.com/urfave/cli/v2"
+	"os"
+)
 
 func main() {
-	fmt.Println("Welcome to bloom!")
+	(&cli.App{}).Run(os.Args)
 }
