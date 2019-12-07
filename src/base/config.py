@@ -1,0 +1,2 @@
+bloomstore = '/Users/william/bloomstore'
+
