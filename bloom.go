@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -77,6 +78,14 @@ func seperateTitle(doc string) (string, string) {
 	return title, body
 }
 
+// TODO omit wechat links (mp.weixin.qq.com)
+func transferLinkToFootNote(doc string) (string, error) {
+	// workaround regex, because Go does not support lookbehind
+	re := regexp.MustCompile(`([^!])\[(.*)\]\((.*)\)`)
+	res := re.ReplaceAll([]byte(doc), []byte(`$1[$2]($3 "$2")`))
+	return string(res), nil
+}
+
 // Currently: for wechat
 func publishArticle(articlePath string) error {
 	fmt.Println("Process article: ", articlePath)
@@ -104,6 +113,12 @@ func publishArticle(articlePath string) error {
 	}
 
 	_, body := seperateTitle(content)
+
+	// For wechat articles, we turn links to footnotes
+	body, err = transferLinkToFootNote(body)
+	if err != nil {
+		return err
+	}
 
 	// For wechat articles, we only copy body
 	err = clipboard.WriteAll(body)
