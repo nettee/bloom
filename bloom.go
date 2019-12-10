@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/atotto/clipboard"
@@ -49,11 +50,38 @@ type MetaInfo struct {
 	Base BaseInfo
 }
 
+func readMarkdownDoc(docFile string) (string, error) {
+	bytes, err := ioutil.ReadFile(docFile)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func seperateTitle(doc string) (string, string) {
+	lines := strings.Split(doc, "\n")
+	title := ""
+	body := ""
+	i := 0
+	for len(lines) > i {
+		if lines[i] == "" {
+			// do nothing
+		} else if strings.HasPrefix(lines[i], "# ") {
+			title = lines[0]
+		} else {
+			break
+		}
+		i++
+	}
+	body = strings.Join(lines[i:], "\n")
+	return title, body
+}
+
+// Currently: for wechat
 func publishArticle(articlePath string) error {
-	fmt.Println(articlePath)
+	fmt.Println("Process article: ", articlePath)
 
 	metaFile := path.Join(articlePath, "meta.toml")
-	fmt.Println(metaFile)
 
 	var meta MetaInfo
 	_, err := toml.DecodeFile(metaFile, &meta)
@@ -61,18 +89,28 @@ func publishArticle(articlePath string) error {
 		return err
 	}
 
+	// TODO debug mode
 	fmt.Printf("%+v\n", meta)
 
 	docName := meta.Base.DocName
-	content, err := ioutil.ReadFile(docName)
+	if docName == "" {
+		return errors.New("docName is empty")
+	}
+	docFile := path.Join(articlePath, docName)
+	fmt.Println("Markdown document: ", docFile)
+	content, err := readMarkdownDoc(docFile)
 	if err != nil {
 		return err
 	}
 
-	err = clipboard.WriteAll(string(content))
+	_, body := seperateTitle(content)
+
+	// For wechat articles, we only copy body
+	err = clipboard.WriteAll(body)
 	if err != nil {
 		return err
 	}
+	fmt.Println("document copied to clipboard")
 
 	return nil
 }
