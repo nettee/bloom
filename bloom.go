@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/atotto/clipboard"
 	"github.com/urfave/cli/v2"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,17 +40,17 @@ func listItems() error {
 }
 
 type BaseInfo struct {
-	Name string
-	Type string
-	DocName string
-	TitleEn string
-	TitleCn string
-	CreateTime time.Time
-	Labels []string
+	Name string `toml:"name"`
+	Type string `toml:"type"`
+	DocName string `toml:"docName"`
+	TitleEn string `toml:"titleEn"`
+	TitleCn string `toml:"titleCn"`
+	CreateTime time.Time `toml:"createTime"`
+	Labels []string `toml:"labels"`
 }
 
 type MetaInfo struct {
-	Base BaseInfo
+	Base BaseInfo `toml:"base"`
 }
 
 func readMarkdownDoc(docFile string) (string, error) {
@@ -130,6 +132,73 @@ func publishArticle(articlePath string) error {
 	return nil
 }
 
+func createArticle(en string, cn string) error {
+	titleEn := en
+	titleCn := cn
+
+	nameSplitter := regexp.MustCompile(`[^0-9A-Za-z]+`)
+	nameParts := nameSplitter.Split(en, -1)
+	name := strings.Join(nameParts, "-")
+
+	docNameSplitter := regexp.MustCompile(`\s+`)
+	docNameParts := docNameSplitter.Split(cn, -1)
+	docNameBare := strings.Join(docNameParts, "-")
+	docName := docNameBare + ".md"
+
+	err := os.Mkdir(docNameBare, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	err = os.Chdir(docNameBare)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(docName)
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+
+	meta := MetaInfo {
+		Base: BaseInfo {
+			Name:       name,
+			Type:       "article", // TODO collection
+			DocName:    docName,
+			TitleEn:    titleEn,
+			TitleCn:    titleCn,
+			CreateTime: time.Now(),
+			Labels:     []string{},
+		},
+	}
+
+	metaBuf := new(bytes.Buffer)
+	err = toml.NewEncoder(metaBuf).Encode(meta)
+	if err != nil {
+		return err
+	}
+
+	metaFile, err := os.Create("meta.toml")
+	_, err = io.WriteString(metaFile, metaBuf.String())
+	if err != nil {
+		return err
+	}
+	err = metaFile.Close()
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir("img", os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 
 	app := &cli.App {
@@ -147,8 +216,29 @@ func main() {
 				Name:    "new",
 				Aliases: [] string{"n"},
 				Usage:   "create article or collection",
+				Flags: []cli.Flag {
+					&cli.StringFlag {
+						Name: "en",
+						Value: "",
+						Usage: "The article's English name",
+					},
+					&cli.StringFlag {
+						Name: "cn",
+						Value: "",
+						Usage: "The article's Chinese name",
+					},
+				},
 				Action: func(c *cli.Context) error {
-					return nil
+					// TODO check arg exists
+					en := c.String("en")
+					cn := c.String("cn")
+					if en == "" {
+						return errors.New("english name required")
+					}
+					if cn == "" {
+						return errors.New("chinese name required")
+					}
+					return createArticle(en, cn)
 				},
 			},
 			{
