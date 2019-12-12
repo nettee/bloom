@@ -123,7 +123,7 @@ func addHexoHeaderLines(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 
 // Hexo mathjax can only recognize `\newline` syntax instead of `\\`
 func transferMathEquations(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
-	// TODO transfer math equations: \\ to \newline
+	doc.transferMathEquationFormat()
 	return doc, nil
 }
 

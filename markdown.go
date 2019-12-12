@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
@@ -65,4 +66,17 @@ func (doc *MarkdownDoc) transferLinkToFootNote() {
 	//res := re.ReplaceAll([]byte(doc), []byte(`$1[$2]($3 "$2")`))
 	//return string(res), nil
 	// TODO currently not working
+}
+
+// transfer math equations: \\ to \newline
+// TODO workaround, try to parse markdown
+func (doc *MarkdownDoc) transferMathEquationFormat() {
+	count := 0
+	for i, line := range doc.body {
+		if strings.HasSuffix(line, "\\\\") {
+			doc.body[i] = line[:len(line)-2] + "\\newline"
+			count++
+		}
+	}
+	fmt.Printf("Transfered %d math equations\n", count)
 }
