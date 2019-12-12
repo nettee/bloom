@@ -109,7 +109,7 @@ func getDocGeneral(articlePath string, meta MetaInfo) (MarkdownDoc, error) {
 
 func addHexoHeaderLines(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	headerLines := []string {
-		"title: " + doc.Title(),
+		"title: '" + doc.Title() + "'",
 		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
 		"tags: [" + strings.Join(meta.Base.Tags, ", ") + "]",
 		"---",
