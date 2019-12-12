@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/atotto/clipboard"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"strings"
 )
@@ -14,7 +16,7 @@ const hexoProject = "/Users/william/projects/nettee.github.io"
 type GetMeta = func(articlePath string) (MetaInfo, error)
 type GetDoc = func(articlePath string, meta MetaInfo) (MarkdownDoc, error)
 type Transfer = func(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error)
-type Save = func(doc MarkdownDoc, meta MetaInfo) error
+type Save = func(articlePath string, doc MarkdownDoc, meta MetaInfo) error
 
 type Publisher struct {
 	getMeta   GetMeta
@@ -43,7 +45,7 @@ func (publisher *Publisher) publish(articlePath string) error {
 		}
 	}
 
-	err = publisher.save(doc, meta)
+	err = publisher.save(articlePath, doc, meta)
 	if err != nil {
 		return err
 	}
@@ -132,10 +134,13 @@ func transferDocForWechat(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	return doc, nil
 }
 
-func exportToHexo(doc MarkdownDoc, meta MetaInfo) error {
+func exportToHexo(articlePath string, doc MarkdownDoc, meta MetaInfo) error {
+	hexoPosts := path.Join(hexoProject, "source/_posts")
 	name := meta.Base.Name
-	targetFile := path.Join(hexoProject, "source/_posts", name + ".md")
+	targetFile := path.Join(hexoPosts, name + ".md")
 
+
+	// Write doc content to target file
 	file, err := os.Create(targetFile)
 	if err != nil {
 		return err
@@ -148,14 +153,35 @@ func exportToHexo(doc MarkdownDoc, meta MetaInfo) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Write to file:", targetFile)
 
-	// TODO copy images
+	// Copy images to target directory
+	// TODO modify image relative path (but it just works well in Hexo)
+	sourceDir := path.Join(articlePath, "img")
+	targetDir := path.Join(hexoPosts, name)
+	err = os.MkdirAll(targetDir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	files, err := ioutil.ReadDir(sourceDir)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		filePath := path.Join(sourceDir, file.Name())
+		cmd := exec.Command("cp", "-r", filePath, targetDir)
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
 
-	fmt.Println("Write to file: ", targetFile)
+	fmt.Printf("Copy %d images to dir: %s\n", len(files), targetDir)
+
 	return nil
 }
 
-func copyBody(doc MarkdownDoc, meta MetaInfo) error {
+func copyBody(articlePath string, doc MarkdownDoc, meta MetaInfo) error {
 	// For wechat articles, we only copy body
 	err := clipboard.WriteAll(doc.Body())
 	if err != nil {
