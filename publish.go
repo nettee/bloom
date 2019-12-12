@@ -11,9 +11,49 @@ import (
 
 const hexoProject = "/Users/william/projects/nettee.github.io"
 
-var platformPublisher = map[string] func(string) error {
-	"wechat": publishArticleToWechat,
-	"hexo": publishArticleToHexo,
+type Publisher struct {
+	getMeta  func(articlePath string) (MetaInfo, error)
+	getDoc   func(articlePath string, meta MetaInfo) (MarkdownDoc, error)
+	transfer func(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error)
+	save     func(doc MarkdownDoc, meta MetaInfo) error
+}
+
+func (publisher *Publisher) publish(articlePath string) error {
+	fmt.Println("Process article: ", articlePath)
+
+	meta, err := publisher.getMeta(articlePath)
+	if err != nil {
+		return err
+	}
+
+	doc, err := publisher.getDoc(articlePath, meta)
+	if err != nil {
+		return err
+	}
+
+	doc, err = publisher.transfer(doc, meta)
+
+	err = publisher.save(doc, meta)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var platformPublisher = map[string]Publisher {
+	"wechat": {
+		getMeta:  getMetaGeneral,
+		getDoc:   getDocGeneral,
+		transfer: transferDocForWechat,
+		save:     copyBody,
+	},
+	"hexo": {
+		getMeta:  getMetaGeneral,
+		getDoc:   getDocGeneral,
+		transfer: transferDocForHexo,
+		save:     exportToHexo,
+	},
 }
 
 func publishArticle(articlePath string, platform string) error {
@@ -23,35 +63,47 @@ func publishArticle(articlePath string, platform string) error {
 	fmt.Printf("Publish to platform %s...\n", platform)
 
 	publisher := platformPublisher[platform]
-	return publisher(articlePath)
+	return publisher.publish(articlePath)
 }
 
-func publishArticleToHexo(articlePath string) error {
-	fmt.Println("Process article: ", articlePath)
-
+func getMetaGeneral(articlePath string) (MetaInfo, error) {
 	metaFile := path.Join(articlePath, "meta.toml")
 	meta, err := readMetaFromFile(metaFile)
 	if err != nil {
-		return err
+		return MetaInfo{}, err
 	}
 
+	// TODO debug mode
 	fmt.Printf("%+v\n", meta)
+	return meta, nil
+}
 
-	name := meta.Base.Name
-	targetFile := path.Join(hexoProject, "source/_posts", name + ".md")
-
+func getDocGeneral(articlePath string, meta MetaInfo) (MarkdownDoc, error) {
 	docName := meta.Base.DocName
 	if docName == "" {
-		return errors.New("docName is empty")
+		return MarkdownDoc{}, errors.New("docName is empty")
 	}
 	docFile := path.Join(articlePath, docName)
+	// TODO debug mode
 	fmt.Println("Markdown document: ", docFile)
-	doc, err := readMarkdownDocFromFile(docFile)
-	if err != nil {
-		return err
-	}
+	return readMarkdownDocFromFile(docFile)
 
+}
+
+func transferDocForHexo(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	// TODO transfer math equations: \\ to \newline
+	return doc, nil
+}
+
+func transferDocForWechat(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+	// For wechat articles, we turn links to footnotes
+	doc.transferLinkToFootNote()
+	return doc, nil
+}
+
+func exportToHexo(doc MarkdownDoc, meta MetaInfo) error {
+	name := meta.Base.Name
+	targetFile := path.Join(hexoProject, "source/_posts", name + ".md")
 
 	headerLines := []string {
 		"title: " + doc.Title(),
@@ -75,46 +127,18 @@ func publishArticleToHexo(articlePath string) error {
 	}
 
 	fmt.Println("Write to file: ", targetFile)
-
 	return nil
 }
 
-func publishArticleToWechat(articlePath string) error {
-	fmt.Println("Process article: ", articlePath)
-
-	metaFile := path.Join(articlePath, "meta.toml")
-	meta, err := readMetaFromFile(metaFile)
-	if err != nil {
-		return err
-	}
-
-	// TODO debug mode
-	fmt.Printf("%+v\n", meta)
-
-	docName := meta.Base.DocName
-	if docName == "" {
-		return errors.New("docName is empty")
-	}
-	docFile := path.Join(articlePath, docName)
-	fmt.Println("Markdown document: ", docFile)
-	doc, err := readMarkdownDocFromFile(docFile)
-	if err != nil {
-		return err
-	}
-
-	// For wechat articles, we turn links to footnotes
-	doc.transferLinkToFootNote()
-
+func copyBody(doc MarkdownDoc, meta MetaInfo) error {
 	// For wechat articles, we only copy body
-	err = clipboard.WriteAll(doc.Body())
+	err := clipboard.WriteAll(doc.Body())
 	if err != nil {
 		return err
 	}
-	fmt.Println("document copied to clipboard")
-
+	fmt.Println("document body copied to clipboard")
 	return nil
 }
-
 
 
 
