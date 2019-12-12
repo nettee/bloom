@@ -11,11 +11,16 @@ import (
 
 const hexoProject = "/Users/william/projects/nettee.github.io"
 
+type GetMeta = func(articlePath string) (MetaInfo, error)
+type GetDoc = func(articlePath string, meta MetaInfo) (MarkdownDoc, error)
+type Transfer = func(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error)
+type Save = func(doc MarkdownDoc, meta MetaInfo) error
+
 type Publisher struct {
-	getMeta  func(articlePath string) (MetaInfo, error)
-	getDoc   func(articlePath string, meta MetaInfo) (MarkdownDoc, error)
-	transfer func(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error)
-	save     func(doc MarkdownDoc, meta MetaInfo) error
+	getMeta   GetMeta
+	getDoc    GetDoc
+	transfers []Transfer
+	save      Save
 }
 
 func (publisher *Publisher) publish(articlePath string) error {
@@ -31,7 +36,12 @@ func (publisher *Publisher) publish(articlePath string) error {
 		return err
 	}
 
-	doc, err = publisher.transfer(doc, meta)
+	for _, transfer := range publisher.transfers {
+		doc, err = transfer(doc, meta)
+		if err != nil {
+			return err
+		}
+	}
 
 	err = publisher.save(doc, meta)
 	if err != nil {
@@ -43,16 +53,21 @@ func (publisher *Publisher) publish(articlePath string) error {
 
 var platformPublisher = map[string]Publisher {
 	"wechat": {
-		getMeta:  getMetaGeneral,
-		getDoc:   getDocGeneral,
-		transfer: transferDocForWechat,
-		save:     copyBody,
+		getMeta:   getMetaGeneral,
+		getDoc:    getDocGeneral,
+		transfers: []Transfer {
+			transferDocForWechat,
+		},
+		save:      copyBody,
 	},
 	"hexo": {
-		getMeta:  getMetaGeneral,
-		getDoc:   getDocGeneral,
-		transfer: transferDocForHexo,
-		save:     exportToHexo,
+		getMeta:   getMetaGeneral,
+		getDoc:    getDocGeneral,
+		transfers: []Transfer {
+			addHexoHeaderLines,
+			transferMathEquations,
+		},
+		save:      exportToHexo,
 	},
 }
 
@@ -90,10 +105,26 @@ func getDocGeneral(articlePath string, meta MetaInfo) (MarkdownDoc, error) {
 
 }
 
-func transferDocForHexo(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+func addHexoHeaderLines(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+	headerLines := []string {
+		"title: " + doc.Title(),
+		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
+		"tags: [" + strings.Join(meta.Base.Tags, ", ") + "]",
+		"---",
+		"",
+	}
+
+	newBody := append(headerLines, doc.body...)
+
+	return MarkdownDoc{title: doc.title, body: newBody}, nil
+}
+
+// Hexo mathjax can only recognize `\newline` syntax instead of `\\`
+func transferMathEquations(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	// TODO transfer math equations: \\ to \newline
 	return doc, nil
 }
+
 
 func transferDocForWechat(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	// For wechat articles, we turn links to footnotes
@@ -105,19 +136,11 @@ func exportToHexo(doc MarkdownDoc, meta MetaInfo) error {
 	name := meta.Base.Name
 	targetFile := path.Join(hexoProject, "source/_posts", name + ".md")
 
-	headerLines := []string {
-		"title: " + doc.Title(),
-		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
-		"tags: [" + strings.Join(meta.Base.Tags, ", ") + "]",
-	}
-
-	targetFileContent := strings.Join(headerLines, "\n") + "\n---\n\n" + doc.Body()
-
 	file, err := os.Create(targetFile)
 	if err != nil {
 		return err
 	}
-	_, err = file.WriteString(targetFileContent)
+	_, err = file.WriteString(doc.Body())
 	if err != nil {
 		return err
 	}
@@ -125,6 +148,8 @@ func exportToHexo(doc MarkdownDoc, meta MetaInfo) error {
 	if err != nil {
 		return err
 	}
+
+	// TODO copy images
 
 	fmt.Println("Write to file: ", targetFile)
 	return nil
@@ -139,9 +164,3 @@ func copyBody(doc MarkdownDoc, meta MetaInfo) error {
 	fmt.Println("document body copied to clipboard")
 	return nil
 }
-
-
-
-
-
-
