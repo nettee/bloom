@@ -46,7 +46,7 @@ func createArticle(en string, cn string) error {
 			TitleEn:    titleEn,
 			TitleCn:    titleCn,
 			CreateTime: time.Now(),
-			Labels:     []string{},
+			Tags:     []string{},
 		},
 	}
 

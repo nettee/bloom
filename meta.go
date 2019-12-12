@@ -15,7 +15,7 @@ type BaseInfo struct {
 	TitleEn string `toml:"titleEn"`
 	TitleCn string `toml:"titleCn"`
 	CreateTime time.Time `toml:"createTime"`
-	Labels []string `toml:"labels"`
+	Tags []string `toml:"tags"`
 }
 
 type MetaInfo struct {

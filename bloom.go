@@ -63,10 +63,18 @@ func main() {
 				Name: "publish",
 				Aliases: [] string{"pub", "p", "deploy", "d"},
 				Usage: "publish an article to (possibly) different platforms",
+				Flags: []cli.Flag {
+					&cli.StringFlag {
+						Name: "platform",
+						Aliases: []string {"to"},
+						Value: "",
+						Usage: "The article's English name",
+					},
+				},
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					return publishArticle(articlePath)
+					return publishArticle(articlePath, c.String("platform"))
 				},
 			},
 		},
