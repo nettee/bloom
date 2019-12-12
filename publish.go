@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/atotto/clipboard"
-	"io/ioutil"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 )
 
@@ -48,20 +46,20 @@ func publishArticleToHexo(articlePath string) error {
 	}
 	docFile := path.Join(articlePath, docName)
 	fmt.Println("Markdown document: ", docFile)
-	content, err := readMarkdownDoc(docFile)
+	doc, err := readMarkdownDocFromFile(docFile)
 	if err != nil {
 		return err
 	}
 
-	title, body := separateTitle(content)
+	// TODO transfer math equations: \\ to \newline
 
 	headerLines := []string {
-		"title: " + title,
+		"title: " + doc.Title(),
 		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
 		"tags: [" + strings.Join(meta.Base.Tags, ", ") + "]",
 	}
 
-	targetFileContent := strings.Join(headerLines, "\n") + "\n---\n\n" + body
+	targetFileContent := strings.Join(headerLines, "\n") + "\n---\n\n" + doc.Body()
 
 	file, err := os.Create(targetFile)
 	if err != nil {
@@ -99,21 +97,16 @@ func publishArticleToWechat(articlePath string) error {
 	}
 	docFile := path.Join(articlePath, docName)
 	fmt.Println("Markdown document: ", docFile)
-	content, err := readMarkdownDoc(docFile)
+	doc, err := readMarkdownDocFromFile(docFile)
 	if err != nil {
 		return err
 	}
-
-	_, body := separateTitle(content)
 
 	// For wechat articles, we turn links to footnotes
-	body, err = transferLinkToFootNote(body)
-	if err != nil {
-		return err
-	}
+	doc.transferLinkToFootNote()
 
 	// For wechat articles, we only copy body
-	err = clipboard.WriteAll(body)
+	err = clipboard.WriteAll(doc.Body())
 	if err != nil {
 		return err
 	}
@@ -122,42 +115,9 @@ func publishArticleToWechat(articlePath string) error {
 	return nil
 }
 
-// TODO omit wechat links (mp.weixin.qq.com)
-func transferLinkToFootNote(doc string) (string, error) {
-	// workaround regex, because Go does not support lookbehind
-	re := regexp.MustCompile(`([^!])\[(.*)\]\((.*)\)`)
-	res := re.ReplaceAll([]byte(doc), []byte(`$1[$2]($3 "$2")`))
-	return string(res), nil
-}
 
-func readMarkdownDoc(docFile string) (string, error) {
-	bytes, err := ioutil.ReadFile(docFile)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
-}
 
-func separateTitle(doc string) (string, string) {
-	lines := strings.Split(doc, "\n")
-	titleLine := ""
-	body := ""
-	i := 0
-	for len(lines) > i {
-		if lines[i] == "" {
-			// do nothing
-		} else if strings.HasPrefix(lines[i], "# ") {
-			titleLine = lines[0]
-		} else {
-			break
-		}
-		i++
-	}
-	body = strings.Join(lines[i:], "\n")
 
-	titleLeading := regexp.MustCompile(`^#\s+`)
-	title := string(titleLeading.ReplaceAll([]byte(titleLine), []byte("")))
 
-	return title, body
-}
+
 
