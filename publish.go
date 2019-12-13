@@ -66,8 +66,9 @@ var platformPublisher = map[string]Publisher {
 		getMeta:   getMetaGeneral,
 		getDoc:    getDocGeneral,
 		transfers: []Transfer {
-			addHexoHeaderLines,
 			transferMathEquations,
+			addReadMoreLabel,
+			addHexoHeaderLines,
 		},
 		save:      exportToHexo,
 	},
@@ -127,6 +128,24 @@ func transferMathEquations(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) 
 	return doc, nil
 }
 
+func addReadMoreLabel(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+	n := meta.Hexo.ReadMore
+	if n < 15 {
+		n = 15
+	}
+
+	if len(doc.body) < n {
+		return doc, nil
+	}
+
+	doc.body = append(doc.body, "", "", "")
+	copy(doc.body[n+3:], doc.body[n:])
+	doc.body[n] = ""
+	doc.body[n+1] = "<!-- more -->"
+	doc.body[n+2] = ""
+
+	return doc, nil
+}
 
 func transferDocForWechat(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	// For wechat articles, we turn links to footnotes

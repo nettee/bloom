@@ -18,8 +18,13 @@ type BaseInfo struct {
 	Tags []string `toml:"tags"`
 }
 
+type HexoInfo struct {
+	ReadMore int `toml:"readMore"`
+}
+
 type MetaInfo struct {
 	Base BaseInfo `toml:"base"`
+	Hexo HexoInfo `toml:"hexo"`
 }
 
 func readMetaFromFile(fileName string) (MetaInfo, error) {
