@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"errors"
@@ -75,7 +75,7 @@ var platformPublisher = map[string]Publisher {
 	},
 }
 
-func publishArticle(articlePath string, platform string) error {
+func PublishArticle(articlePath string, platform string) error {
 	if platform == "" {
 		return errors.New("publish platform not provided")
 	}
@@ -105,7 +105,7 @@ func getDocGeneral(articlePath string, meta model.MetaInfo) (MarkdownDoc, error)
 	docFile := path.Join(articlePath, docName)
 	// TODO debug mode
 	fmt.Println("Markdown document: ", docFile)
-	return readMarkdownDocFromFile(docFile)
+	return ReadMarkdownDocFromFile(docFile)
 
 }
 

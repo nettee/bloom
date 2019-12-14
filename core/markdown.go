@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ func NewMarkdownDoc(content string) MarkdownDoc {
 	}
 }
 
-func readMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
+func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 	bytes, err := ioutil.ReadFile(docFile)
 	if err != nil {
 		return MarkdownDoc{}, err

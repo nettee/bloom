@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"path"
 )
 
-func updateArticleMeta(articlePath string) error {
+func UpdateArticleMeta(articlePath string) error {
 	article := model.NewArticle(articlePath)
 	meta, err := article.ReadMeta()
 	if err != nil {
@@ -14,7 +14,7 @@ func updateArticleMeta(articlePath string) error {
 	}
 
 	docFile := path.Join(article.Path, meta.Base.DocName)
-	doc, err := readMarkdownDocFromFile(docFile)
+	doc, err := ReadMarkdownDocFromFile(docFile)
 	if err != nil {
 		return err
 	}

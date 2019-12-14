@@ -1,16 +1,16 @@
-package main
+package core
 
 import (
 	"fmt"
+	"github.com/nettee/bloom/config"
 	"io/ioutil"
-	"log"
 	"strings"
 )
 
-func listItems() error {
-	items, err := ioutil.ReadDir(bloomStore)
+func ListItems() error {
+	items, err := ioutil.ReadDir(config.BloomStore)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	count := 0

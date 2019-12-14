@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"github.com/nettee/bloom/model"
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func createArticle(en string, cn string) error {
+func CreateArticle(en string, cn string) error {
 	titleEn := en
 	titleCn := cn
 

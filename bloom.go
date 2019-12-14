@@ -2,12 +2,11 @@ package main
 
 import (
 	"errors"
+	"github.com/nettee/bloom/core"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 )
-
-const bloomStore = "/Users/william/bloomstore"
 
 func main() {
 
@@ -48,7 +47,7 @@ func main() {
 					if cn == "" {
 						return errors.New("chinese name required")
 					}
-					return createArticle(en, cn)
+					return core.CreateArticle(en, cn)
 				},
 			},
 			{
@@ -58,7 +57,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					return updateArticleMeta(articlePath)
+					return core.UpdateArticleMeta(articlePath)
 				},
 			},
 			{
@@ -66,7 +65,7 @@ func main() {
 				Aliases: [] string{"l"},
 				Usage:   "list articles and collections",
 				Action: func(c *cli.Context) error {
-					return listItems()
+					return core.ListItems()
 				},
 			},
 			{
@@ -84,7 +83,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					return publishArticle(articlePath, c.String("platform"))
+					return core.PublishArticle(articlePath, c.String("platform"))
 				},
 			},
 		},
