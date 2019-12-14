@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const MetaFileName = "meta.toml"
+
 type BaseInfo struct {
 	Name string `toml:"name"`
 	Type string `toml:"type"`

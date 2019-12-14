@@ -52,6 +52,16 @@ func main() {
 				},
 			},
 			{
+				Name: "update",
+				Aliases: [] string {"u"},
+				Usage: "update meta data",
+				Action: func(c *cli.Context) error {
+					// TODO check arg exists
+					articlePath := c.Args().First()
+					return updateArticleMeta(articlePath)
+				},
+			},
+			{
 				Name:    "list",
 				Aliases: [] string{"l"},
 				Usage:   "list articles and collections",
