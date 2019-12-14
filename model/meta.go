@@ -1,4 +1,4 @@
-package main
+package model
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ type MetaInfo struct {
 	Hexo HexoInfo `toml:"hexo"`
 }
 
-func readMetaFromFile(fileName string) (MetaInfo, error) {
+func ReadMetaFromFile(fileName string) (MetaInfo, error) {
 	var meta MetaInfo
 	_, err := toml.DecodeFile(fileName, &meta)
 	if err != nil {
@@ -38,7 +38,7 @@ func readMetaFromFile(fileName string) (MetaInfo, error) {
 	return meta, nil
 }
 
-func writeMetaToFile(meta MetaInfo, fileName string) error {
+func WriteMetaToFile(meta MetaInfo, fileName string) error {
 	metaBuf := new(bytes.Buffer)
 	err := toml.NewEncoder(metaBuf).Encode(meta)
 	if err != nil {

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/nettee/bloom/model"
 	"path"
 )
 
 func updateArticleMeta(articlePath string) error {
-	article := NewArticle(articlePath)
-	meta, err := article.readMeta()
+	article := model.NewArticle(articlePath)
+	meta, err := article.ReadMeta()
 	if err != nil {
 		return err
 	}
@@ -25,7 +26,7 @@ func updateArticleMeta(articlePath string) error {
 		meta.Base.TitleCn = title
 	}
 
-	err = article.writeMeta(meta)
+	err = article.WriteMeta(meta)
 	if err != nil {
 		return err
 	}

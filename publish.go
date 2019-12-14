@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/atotto/clipboard"
+	"github.com/nettee/bloom/model"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,10 +14,10 @@ import (
 
 const hexoProject = "/Users/william/projects/nettee.github.io"
 
-type GetMeta = func(articlePath string) (MetaInfo, error)
-type GetDoc = func(articlePath string, meta MetaInfo) (MarkdownDoc, error)
-type Transfer = func(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error)
-type Save = func(articlePath string, doc MarkdownDoc, meta MetaInfo) error
+type GetMeta = func(articlePath string) (model.MetaInfo, error)
+type GetDoc = func(articlePath string, meta model.MetaInfo) (MarkdownDoc, error)
+type Transfer = func(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error)
+type Save = func(articlePath string, doc MarkdownDoc, meta model.MetaInfo) error
 
 type Publisher struct {
 	getMeta   GetMeta
@@ -84,11 +85,11 @@ func publishArticle(articlePath string, platform string) error {
 	return publisher.publish(articlePath)
 }
 
-func getMetaGeneral(articlePath string) (MetaInfo, error) {
+func getMetaGeneral(articlePath string) (model.MetaInfo, error) {
 	metaFile := path.Join(articlePath, "meta.toml")
-	meta, err := readMetaFromFile(metaFile)
+	meta, err := model.ReadMetaFromFile(metaFile)
 	if err != nil {
-		return MetaInfo{}, err
+		return model.MetaInfo{}, err
 	}
 
 	// TODO debug mode
@@ -96,7 +97,7 @@ func getMetaGeneral(articlePath string) (MetaInfo, error) {
 	return meta, nil
 }
 
-func getDocGeneral(articlePath string, meta MetaInfo) (MarkdownDoc, error) {
+func getDocGeneral(articlePath string, meta model.MetaInfo) (MarkdownDoc, error) {
 	docName := meta.Base.DocName
 	if docName == "" {
 		return MarkdownDoc{}, errors.New("docName is empty")
@@ -108,7 +109,7 @@ func getDocGeneral(articlePath string, meta MetaInfo) (MarkdownDoc, error) {
 
 }
 
-func addHexoHeaderLines(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+func addHexoHeaderLines(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
 	headerLines := []string {
 		"title: '" + doc.Title() + "'",
 		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
@@ -123,12 +124,12 @@ func addHexoHeaderLines(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 }
 
 // Hexo mathjax can only recognize `\newline` syntax instead of `\\`
-func transferMathEquations(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+func transferMathEquations(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
 	doc.transferMathEquationFormat()
 	return doc, nil
 }
 
-func addReadMoreLabel(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+func addReadMoreLabel(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
 	n := meta.Hexo.ReadMore
 	if n < 15 {
 		n = 15
@@ -147,13 +148,13 @@ func addReadMoreLabel(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
 	return doc, nil
 }
 
-func transferDocForWechat(doc MarkdownDoc, meta MetaInfo) (MarkdownDoc, error) {
+func transferDocForWechat(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
 	// For wechat articles, we turn links to footnotes
 	doc.transferLinkToFootNote()
 	return doc, nil
 }
 
-func exportToHexo(articlePath string, doc MarkdownDoc, meta MetaInfo) error {
+func exportToHexo(articlePath string, doc MarkdownDoc, meta model.MetaInfo) error {
 	hexoPosts := path.Join(hexoProject, "source/_posts")
 	name := meta.Base.Name
 	targetFile := path.Join(hexoPosts, name + ".md")
@@ -200,7 +201,7 @@ func exportToHexo(articlePath string, doc MarkdownDoc, meta MetaInfo) error {
 	return nil
 }
 
-func copyBody(articlePath string, doc MarkdownDoc, meta MetaInfo) error {
+func copyBody(articlePath string, doc MarkdownDoc, meta model.MetaInfo) error {
 	// For wechat articles, we only copy body
 	err := clipboard.WriteAll(doc.Body())
 	if err != nil {

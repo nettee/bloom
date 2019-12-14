@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/nettee/bloom/model"
 	"os"
 	"regexp"
 	"strings"
@@ -38,8 +39,8 @@ func createArticle(en string, cn string) error {
 		return err
 	}
 
-	meta := MetaInfo {
-		Base: BaseInfo {
+	meta := model.MetaInfo{
+		Base: model.BaseInfo{
 			Name:       name,
 			Type:       "article", // TODO collection
 			DocName:    docName,
@@ -50,7 +51,7 @@ func createArticle(en string, cn string) error {
 		},
 	}
 
-	err = writeMetaToFile(meta, "meta.toml")
+	err = model.WriteMetaToFile(meta, "meta.toml")
 	if err != nil {
 		return err
 	}
