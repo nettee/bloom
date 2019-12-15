@@ -1,4 +1,4 @@
-package core
+package model
 
 import (
 	"fmt"
@@ -18,6 +18,10 @@ func (doc *MarkdownDoc) Title() string {
 
 func (doc *MarkdownDoc) Body() string {
 	return strings.Join(doc.body, "\n")
+}
+
+func (doc *MarkdownDoc) Lines() int {
+	return len(doc.body)
 }
 
 func NewMarkdownDoc(content string) MarkdownDoc {
@@ -59,8 +63,21 @@ func separateTitle(content string) (string, []string) {
 	return title, body
 }
 
+func (doc *MarkdownDoc) PrependLines(lines []string) {
+	doc.body = append(lines, doc.body...)
+}
+
+func (doc *MarkdownDoc) AppendLines(lines []string) {
+	doc.body = append(doc.body, lines...)
+}
+
+func (doc *MarkdownDoc) InsertLines(n int, lines []string) {
+	// TODO index check
+	doc.body = append(doc.body[:n], append(lines, doc.body[n:]...)...)
+}
+
 // TODO omit wechat links (mp.weixin.qq.com)
-func (doc *MarkdownDoc) transferLinkToFootNote() {
+func (doc *MarkdownDoc) TransferLinkToFootNote() {
 	// workaround regex, because Go does not support lookbehind
 	//re := regexp.MustCompile(`([^!])\[(.*)\]\((.*)\)`)
 	//res := re.ReplaceAll([]byte(doc), []byte(`$1[$2]($3 "$2")`))
@@ -70,7 +87,7 @@ func (doc *MarkdownDoc) transferLinkToFootNote() {
 
 // transfer math equations: \\ to \newline
 // TODO workaround, try to parse markdown
-func (doc *MarkdownDoc) transferMathEquationFormat() {
+func (doc *MarkdownDoc) TransferMathEquationFormat() {
 	count := 0
 	for i, line := range doc.body {
 		if strings.HasSuffix(line, "\\\\") {

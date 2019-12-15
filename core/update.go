@@ -3,18 +3,16 @@ package core
 import (
 	"fmt"
 	"github.com/nettee/bloom/model"
-	"path"
 )
 
-func UpdateArticleMeta(articlePath string) error {
-	article := model.NewArticle(articlePath)
+func UpdateArticleMeta(article model.Article) error {
 	meta, err := article.ReadMeta()
 	if err != nil {
 		return err
 	}
 
-	docFile := path.Join(article.Path, meta.Base.DocName)
-	doc, err := ReadMarkdownDocFromFile(docFile)
+	docFile := article.DocPath(meta.Base.DocName)
+	doc, err := model.ReadMarkdownDocFromFile(docFile)
 	if err != nil {
 		return err
 	}

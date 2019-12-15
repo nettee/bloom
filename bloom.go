@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"github.com/nettee/bloom/core"
+	"github.com/nettee/bloom/model"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -10,29 +11,29 @@ import (
 
 func main() {
 
-	app := &cli.App {
-		Name: "bloom",
+	app := &cli.App{
+		Name:    "bloom",
 		Version: "0.0.1",
-		Authors: [] *cli.Author {
+		Authors: []*cli.Author{
 			{
 				Name:  "nettee",
 				Email: "nettee.liu@gmail.com",
 			},
 		},
 		Usage: "Markdown article manager",
-		Commands: [] *cli.Command {
+		Commands: []*cli.Command{
 			{
 				Name:    "create",
-				Aliases: [] string{"c", "new", "n"},
+				Aliases: []string{"c", "new", "n"},
 				Usage:   "create article or collection",
-				Flags: []cli.Flag {
-					&cli.StringFlag {
-						Name: "en",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "en",
 						Value: "",
 						Usage: "The article's English name",
 					},
-					&cli.StringFlag {
-						Name: "cn",
+					&cli.StringFlag{
+						Name:  "cn",
 						Value: "",
 						Usage: "The article's Chinese name",
 					},
@@ -51,39 +52,41 @@ func main() {
 				},
 			},
 			{
-				Name: "update",
-				Aliases: [] string {"u"},
-				Usage: "update meta data",
+				Name:    "update",
+				Aliases: []string{"u"},
+				Usage:   "update meta data",
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					return core.UpdateArticleMeta(articlePath)
+					article := model.NewArticle(articlePath)
+					return core.UpdateArticleMeta(article)
 				},
 			},
 			{
 				Name:    "list",
-				Aliases: [] string{"l"},
+				Aliases: []string{"l"},
 				Usage:   "list articles and collections",
 				Action: func(c *cli.Context) error {
 					return core.ListItems()
 				},
 			},
 			{
-				Name: "publish",
-				Aliases: [] string{"pub", "p", "deploy", "d"},
-				Usage: "publish an article to (possibly) different platforms",
-				Flags: []cli.Flag {
-					&cli.StringFlag {
-						Name: "platform",
-						Aliases: []string {"to"},
-						Value: "",
-						Usage: "The article's English name",
+				Name:    "publish",
+				Aliases: []string{"pub", "p", "deploy", "d"},
+				Usage:   "publish an article to (possibly) different platforms",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "platform",
+						Aliases: []string{"to"},
+						Value:   "",
+						Usage:   "The article's English name",
 					},
 				},
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					return core.PublishArticle(articlePath, c.String("platform"))
+					article := model.NewArticle(articlePath)
+					return core.PublishArticle(article, c.String("platform"))
 				},
 			},
 		},
