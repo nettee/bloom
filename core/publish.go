@@ -73,6 +73,14 @@ var platformPublisher = map[string]Publisher {
 		},
 		save:      exportToHexo,
 	},
+	"xzl": {
+		getMeta: getMetaGeneral,
+		getDoc: getDocGeneral,
+		transfers: []Transfer {
+			transferDocForXiaozhuanlan,
+		},
+		save: copyBody,
+	},
 }
 
 func PublishArticle(articlePath string, platform string) error {
@@ -81,7 +89,10 @@ func PublishArticle(articlePath string, platform string) error {
 	}
 	fmt.Printf("Publish to platform %s...\n", platform)
 
-	publisher := platformPublisher[platform]
+	publisher, present := platformPublisher[platform]
+	if !present {
+		return errors.New(fmt.Sprintf("No publisher found for platform %s", platform))
+	}
 	return publisher.publish(articlePath)
 }
 
@@ -151,6 +162,11 @@ func addReadMoreLabel(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error)
 func transferDocForWechat(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
 	// For wechat articles, we turn links to footnotes
 	doc.transferLinkToFootNote()
+	return doc, nil
+}
+
+func transferDocForXiaozhuanlan(doc MarkdownDoc, meta model.MetaInfo) (MarkdownDoc, error) {
+	// do nothing
 	return doc, nil
 }
 
