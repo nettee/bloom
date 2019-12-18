@@ -61,7 +61,7 @@ var platformPublisher = map[string]Publisher {
 		transfers: []Transfer {
 			transferDocForWechat,
 		},
-		save:      copyBody,
+		save: copyTitleAndBody,
 	},
 	"hexo": {
 		getMeta:   getMetaGeneral,
@@ -79,7 +79,7 @@ var platformPublisher = map[string]Publisher {
 		transfers: []Transfer {
 			transferDocForXiaozhuanlan,
 		},
-		save: copyBody,
+		save: copyTitleAndBody,
 	},
 }
 
@@ -217,9 +217,15 @@ func exportToHexo(articlePath string, doc MarkdownDoc, meta model.MetaInfo) erro
 	return nil
 }
 
-func copyBody(articlePath string, doc MarkdownDoc, meta model.MetaInfo) error {
-	// For wechat articles, we only copy body
-	err := clipboard.WriteAll(doc.Body())
+// Copy title and body seperately
+// Use clipboard tools to fetch clipboard history
+func copyTitleAndBody(articlePath string, doc MarkdownDoc, meta model.MetaInfo) error {
+	err := clipboard.WriteAll(doc.Title())
+	if err != nil {
+		return err
+	}
+	fmt.Println("document title copied to clipboard")
+	err = clipboard.WriteAll(doc.Body())
 	if err != nil {
 		return err
 	}
