@@ -76,10 +76,14 @@ var platformPublisher = map[string]Publisher{
 	"xzl": {
 		getMeta: getMetaGeneral,
 		getDoc: getDocGeneral,
-		transfers: []Transfer {
-			transferDocForXiaozhuanlan,
-		},
+		transfers: []Transfer {},
 		save: copyTitleAndBody,
+	},
+	"zhihu": {
+		getMeta: getMetaGeneral,
+		getDoc: getDocGeneral,
+		transfers: []Transfer {},
+		save: saveBodyToTemp,
 	},
 }
 
@@ -164,11 +168,6 @@ func transferDocForWechat(doc model.MarkdownDoc, meta model.MetaInfo) (model.Mar
 	return doc, nil
 }
 
-func transferDocForXiaozhuanlan(doc model.MarkdownDoc, meta model.MetaInfo) (model.MarkdownDoc, error) {
-	// do nothing
-	return doc, nil
-}
-
 func exportToHexo(article model.Article, doc model.MarkdownDoc, meta model.MetaInfo) error {
 	hexoPosts := path.Join(hexoProject, "source/_posts")
 	name := meta.Base.Name
@@ -211,6 +210,31 @@ func exportToHexo(article model.Article, doc model.MarkdownDoc, meta model.MetaI
 	}
 
 	fmt.Printf("Copy %d images to dir: %s\n", len(files), targetDir)
+
+	return nil
+}
+
+func saveBodyToTemp(article model.Article, doc model.MarkdownDoc, meta model.MetaInfo) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	tempFile := path.Join(home, "Desktop", meta.Base.DocName)
+	fmt.Println(tempFile)
+
+	file, err := os.Create(tempFile)
+	if err != nil {
+		return err
+	}
+	_, err = file.WriteString(doc.Body())
+	if err != nil {
+		return err
+	}
+	err = file.Close()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Write to file:", tempFile)
 
 	return nil
 }
