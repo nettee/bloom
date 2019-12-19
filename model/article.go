@@ -1,7 +1,9 @@
 package model
 
 import (
+	"io/ioutil"
 	"path"
+	"strings"
 )
 
 type Article struct {
@@ -22,6 +24,20 @@ func (a *Article) MetaPath() string {
 
 func (a *Article) DocPath(docName string) string {
 	return path.Join(a.path, docName)
+}
+
+func (a *Article) FindMarkdownFiles() ([]string, error) {
+	files, err := ioutil.ReadDir(a.path)
+	if err != nil {
+		return []string{}, err
+	}
+	var markdownFiles []string
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".md") {
+			markdownFiles = append(markdownFiles, file.Name())
+		}
+	}
+	return markdownFiles, nil
 }
 
 func (a *Article) ImagePath() string {
