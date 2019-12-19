@@ -61,7 +61,7 @@ var platformPublisher = map[string]Publisher{
 		transfers: []Transfer{
 			transferDocForWechat,
 		},
-		save: copyBody,
+		save: copyTitleAndBody,
 	},
 	"hexo": {
 		getMeta: getMetaGeneral,
@@ -73,6 +73,14 @@ var platformPublisher = map[string]Publisher{
 		},
 		save: exportToHexo,
 	},
+	"xzl": {
+		getMeta: getMetaGeneral,
+		getDoc: getDocGeneral,
+		transfers: []Transfer {
+			transferDocForXiaozhuanlan,
+		},
+		save: copyTitleAndBody,
+	},
 }
 
 func PublishArticle(article model.Article, platform string) error {
@@ -81,7 +89,10 @@ func PublishArticle(article model.Article, platform string) error {
 	}
 	fmt.Printf("Publish to platform %s...\n", platform)
 
-	publisher := platformPublisher[platform]
+	publisher, present := platformPublisher[platform]
+	if !present {
+		return errors.New(fmt.Sprintf("No publisher found for platform %s", platform))
+	}
 	return publisher.publish(article)
 }
 
@@ -153,6 +164,11 @@ func transferDocForWechat(doc model.MarkdownDoc, meta model.MetaInfo) (model.Mar
 	return doc, nil
 }
 
+func transferDocForXiaozhuanlan(doc model.MarkdownDoc, meta model.MetaInfo) (model.MarkdownDoc, error) {
+	// do nothing
+	return doc, nil
+}
+
 func exportToHexo(article model.Article, doc model.MarkdownDoc, meta model.MetaInfo) error {
 	hexoPosts := path.Join(hexoProject, "source/_posts")
 	name := meta.Base.Name
@@ -199,9 +215,16 @@ func exportToHexo(article model.Article, doc model.MarkdownDoc, meta model.MetaI
 	return nil
 }
 
-func copyBody(article model.Article, doc model.MarkdownDoc, meta model.MetaInfo) error {
-	// For wechat articles, we only copy body
-	err := clipboard.WriteAll(doc.Body())
+// Copy title and body seperately
+// Use clipboard tools to fetch clipboard history
+func copyTitleAndBody(article model.Article, doc model.MarkdownDoc, meta model.MetaInfo) error {
+	err := clipboard.WriteAll(doc.Title())
+	if err != nil {
+		return err
+	}
+	fmt.Println("document title copied to clipboard")
+	err = clipboard.WriteAll(doc.Body())
+
 	if err != nil {
 		return err
 	}
