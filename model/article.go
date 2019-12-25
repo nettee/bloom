@@ -2,28 +2,49 @@ package model
 
 import (
 	"io/ioutil"
+	"os"
 	"path"
 	"strings"
 )
 
+// An article is an organized file structure, including
+// a directory
+// a metadata file
 type Article struct {
 	path string
+	meta MetaInfo
 }
 
-func NewArticle(path string) Article {
-	return Article{path: path}
+func NewArticle(articlePath string) (Article, error) {
+	if _, err := os.Stat(articlePath); os.IsNotExist(err) {
+		return Article{}, err
+	}
+	metaPath := path.Join(articlePath, MetaFileName)
+	meta, err := ReadMetaFromFile(metaPath)
+	if err != nil {
+		return Article{}, err
+	}
+	return Article{path: articlePath, meta: meta}, nil
 }
 
 func (a *Article) Path() string {
 	return a.path
 }
 
-func (a *Article) MetaPath() string {
+func (a *Article) Meta() MetaInfo {
+	return a.meta
+}
+
+func (a *Article) metaPath() string {
 	return path.Join(a.path, MetaFileName)
 }
 
-func (a *Article) DocPath(docName string) string {
-	return path.Join(a.path, docName)
+func (a *Article) DocPath() string {
+	return path.Join(a.path, a.meta.Base.DocName)
+}
+
+func (a *Article) PathTo(relPath string) string {
+	return path.Join(a.path, relPath)
 }
 
 func (a *Article) FindMarkdownFiles() ([]string, error) {
@@ -44,10 +65,11 @@ func (a *Article) ImagePath() string {
 	return path.Join(a.path, "img")
 }
 
-func (a *Article) ReadMeta() (MetaInfo, error) {
-	return ReadMetaFromFile(a.MetaPath())
+func (a *Article) Update(meta MetaInfo) {
+	a.meta = meta
 }
 
-func (a *Article) WriteMeta(meta MetaInfo) error {
-	return WriteMetaToFile(meta, a.MetaPath())
+func (a *Article) Save() error {
+	return WriteMetaToFile(a.meta, a.metaPath())
 }
+

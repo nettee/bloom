@@ -95,20 +95,13 @@ func PublishArticle(article model.Article, platform string) error {
 
 	publisher, present := platformPublisher[platform]
 	if !present {
-		return errors.New(fmt.Sprintf("No publisher found for platform %s", platform))
+		return errors.New(fmt.Sprintf("no publisher found for platform %s", platform))
 	}
 	return publisher.publish(article)
 }
 
 func getMetaGeneral(article model.Article) (model.MetaInfo, error) {
-	meta, err := article.ReadMeta()
-	if err != nil {
-		return model.MetaInfo{}, err
-	}
-
-	// TODO debug mode
-	fmt.Printf("%+v\n", meta)
-	return meta, nil
+	return article.Meta(), nil
 }
 
 func getDocGeneral(article model.Article, meta model.MetaInfo) (model.MarkdownDoc, error) {
@@ -116,7 +109,7 @@ func getDocGeneral(article model.Article, meta model.MetaInfo) (model.MarkdownDo
 	if docName == "" {
 		return model.MarkdownDoc{}, errors.New("docName is empty")
 	}
-	docFile := article.DocPath(docName)
+	docFile := article.DocPath()
 	// TODO debug mode
 	fmt.Println("Markdown document: ", docFile)
 	return model.ReadMarkdownDocFromFile(docFile)

@@ -58,7 +58,10 @@ func main() {
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					article := model.NewArticle(articlePath)
+					article, err := model.NewArticle(articlePath)
+					if err != nil {
+						return err
+					}
 					return core.UpdateArticleMeta(article)
 				},
 			},
@@ -85,7 +88,10 @@ func main() {
 				Action: func(c *cli.Context) error {
 					// TODO check arg exists
 					articlePath := c.Args().First()
-					article := model.NewArticle(articlePath)
+					article, err := model.NewArticle(articlePath)
+					if err != nil {
+						return err
+					}
 					return core.PublishArticle(article, c.String("platform"))
 				},
 			},

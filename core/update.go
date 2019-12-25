@@ -9,14 +9,11 @@ import (
 )
 
 func UpdateArticleMeta(article model.Article) error {
-	meta, err := article.ReadMeta()
-	if err != nil {
-		return err
-	}
+	meta := article.Meta()
 
-	docFile := article.DocPath(meta.Base.DocName)
+	docFile := article.DocPath()
 
-	if _, err = os.Stat(docFile); os.IsNotExist(err) {
+	if _, err := os.Stat(docFile); os.IsNotExist(err) {
 		log.Printf("doc %s not found\n", meta.Base.DocName)
 		// docFile not exists
 		markdownFiles, err := article.FindMarkdownFiles()
@@ -27,7 +24,7 @@ func UpdateArticleMeta(article model.Article) error {
 			return errors.New("no .md files found in directory")
 		} else if len(markdownFiles) == 1 {
 			docName := markdownFiles[0]
-			docFile = article.DocPath(docName)
+			docFile = article.PathTo(docName)
 			log.Printf("update docName to %s\n", docFile)
 		} else {
 			return errors.New("too many .md files found in directory")
@@ -46,7 +43,8 @@ func UpdateArticleMeta(article model.Article) error {
 		meta.Base.TitleCn = title
 	}
 
-	err = article.WriteMeta(meta)
+	article.Update(meta)
+	err = article.Save()
 	if err != nil {
 		return err
 	}
