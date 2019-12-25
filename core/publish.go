@@ -48,12 +48,15 @@ func (publisher *Publisher) publish(article model.Article) error {
 }
 
 var platformPublisher = map[string]Publisher{
+	"xzl": {
+		getDoc:    getDocGeneral,
+		transfers: []Transfer{},
+		save:      copyBody,
+	},
 	"wechat": {
-		getDoc:  getDocGeneral,
-		transfers: []Transfer{
-			transferDocForWechat,
-		},
-		save: copyTitleAndBody,
+		getDoc:    getDocGeneral,
+		transfers: []Transfer{},
+		save:      copyBody,
 	},
 	"hexo": {
 		getDoc:  getDocGeneral,
@@ -64,14 +67,9 @@ var platformPublisher = map[string]Publisher{
 		},
 		save: exportToHexo,
 	},
-	"xzl": {
-		getDoc: getDocGeneral,
-		transfers: []Transfer {},
-		save: copyTitleAndBody,
-	},
 	"zhihu": {
 		getDoc: getDocGeneral,
-		transfers: []Transfer {},
+		transfers: []Transfer{},
 		save: saveBodyToTemp,
 	},
 }
@@ -140,12 +138,6 @@ func addReadMoreLabel(article model.Article, doc model.MarkdownDoc) (model.Markd
 	}
 	doc.InsertLines(n, readMoreLines)
 
-	return doc, nil
-}
-
-func transferDocForWechat(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
-	// For wechat articles, we turn links to footnotes
-	doc.TransferLinkToFootNote()
 	return doc, nil
 }
 
@@ -222,16 +214,8 @@ func saveBodyToTemp(article model.Article, doc model.MarkdownDoc) error {
 	return nil
 }
 
-// Copy title and body seperately
-// Use clipboard tools to fetch clipboard history
-func copyTitleAndBody(article model.Article, doc model.MarkdownDoc) error {
-	err := clipboard.WriteAll(doc.Title())
-	if err != nil {
-		return err
-	}
-	fmt.Println("document title copied to clipboard")
-	err = clipboard.WriteAll(doc.Body())
-
+func copyBody(article model.Article, doc model.MarkdownDoc) error {
+	err := clipboard.WriteAll(doc.Body())
 	if err != nil {
 		return err
 	}
