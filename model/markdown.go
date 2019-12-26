@@ -65,12 +65,35 @@ func (l *ImageLine) String() string {
 	return fmt.Sprintf("![%s](%s)", l.caption, l.uri)
 }
 
+type CodeBlockBorderLine struct {
+	language string // may be empty
+}
+
+func ParseCodeBlockBorderLine(line string) *CodeBlockBorderLine {
+	re := regexp.MustCompile("```(\\w*)")
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid code block border line: `" + line + "'")
+	}
+
+	language := match[1]
+	return &CodeBlockBorderLine{language}
+}
+
+func (l *CodeBlockBorderLine) String() string {
+	return fmt.Sprintf("```%s", l.language)
+}
+
 type NormalLine struct {
 	text string
 }
 
 func (l *NormalLine) String() string {
 	return l.text
+}
+
+type Paragraph struct {
+	lines []Line
 }
 
 type MarkdownDoc struct {
@@ -126,6 +149,8 @@ func parse(content string) []Line {
 			parsed = ParseHeaderLine(line)
 		} else if strings.HasPrefix(line, "!") {
 			parsed = ParseImageLine(line)
+		} else if strings.HasPrefix(line, "```") {
+			parsed = ParseCodeBlockBorderLine(line)
 		} else {
 			parsed = &NormalLine{line}
 		}
@@ -155,6 +180,9 @@ func (doc *MarkdownDoc) Show() {
 		case *ImageLine:
 			imageLine := line.(*ImageLine)
 			fmt.Printf("(image) %s", imageLine.caption)
+		case *CodeBlockBorderLine:
+			codeBlockBorderLine := line.(*CodeBlockBorderLine)
+			fmt.Printf("(code block border) language = '%s'", codeBlockBorderLine.language)
 		case *NormalLine:
 			fmt.Print(line.String())
 		}
