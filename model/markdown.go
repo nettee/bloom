@@ -3,6 +3,10 @@ package model
 import (
 	"fmt"
 	"io/ioutil"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -96,4 +100,34 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 		}
 	}
 	fmt.Printf("Transfered %d math equations\n", count)
+}
+
+func (doc *MarkdownDoc) TransferImageUrl(baseUrlPath string) {
+
+	u := url.URL{}
+	u.Scheme = "http"
+	u.Host = os.Getenv("BLOOM_HOST")
+
+	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
+	for i, line := range doc.body {
+		if !strings.HasPrefix(line, "!") {
+			continue
+		}
+		match := re.FindStringSubmatch(line)
+		if len(match) == 0 {
+			continue
+		}
+		imageMarkdown := match[0]
+		fmt.Println(imageMarkdown)
+		caption := match[1]
+		imageUri := match[2]
+		imageFileName := filepath.Base(imageUri)
+		fmt.Println(imageFileName)
+
+		u.Path = path.Join(baseUrlPath, imageFileName)
+		newImageMarkdown := fmt.Sprintf("![%s](%s)", caption, u.String())
+		fmt.Println(newImageMarkdown)
+
+		doc.body[i] = newImageMarkdown
+	}
 }

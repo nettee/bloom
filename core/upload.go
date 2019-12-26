@@ -13,6 +13,7 @@ var user = os.Getenv("BLOOM_USER")
 var host = os.Getenv("BLOOM_HOST")
 var baseDir = os.Getenv("BLOOM_BASE_DIR")
 
+
 func execCommand(cmd string) error {
 	fmt.Println(cmd)
 	command := exec.Command("sh", "-c", cmd)

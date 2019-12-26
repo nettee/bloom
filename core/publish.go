@@ -50,12 +50,16 @@ func (publisher *Publisher) publish(article model.Article) error {
 var platformPublisher = map[string]Publisher{
 	"xzl": {
 		getDoc:    getDocGeneral,
-		transfers: []Transfer{},
+		transfers: []Transfer{
+			transferImageUrl,
+		},
 		save:      copyBody,
 	},
 	"wechat": {
 		getDoc:    getDocGeneral,
-		transfers: []Transfer{},
+		transfers: []Transfer{
+			transferImageUrl,
+		},
 		save:      copyBody,
 	},
 	"hexo": {
@@ -69,7 +73,9 @@ var platformPublisher = map[string]Publisher{
 	},
 	"zhihu": {
 		getDoc: getDocGeneral,
-		transfers: []Transfer{},
+		transfers: []Transfer{
+			transferImageUrl,
+		},
 		save: saveBodyToTemp,
 	},
 }
@@ -98,6 +104,12 @@ func getDocGeneral(article model.Article) (model.MarkdownDoc, error) {
 	fmt.Println("Markdown document: ", docFile)
 	return model.ReadMarkdownDocFromFile(docFile)
 
+}
+
+func transferImageUrl(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
+	baseUrlPath := os.Getenv("BLOOM_BASE_URL_PATH")
+	doc.TransferImageUrl(path.Join(baseUrlPath, article.Meta().Base.Name))
+	return doc, nil
 }
 
 func addHexoHeaderLines(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
