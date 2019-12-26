@@ -3,53 +3,62 @@ package model
 import (
 	"bytes"
 	"fmt"
-	"github.com/jinzhu/copier"
 	"io/ioutil"
 	"net/url"
-	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-type Line interface {
+//type CodeBlockBorderLine struct {
+//	language string // may be empty
+//}
+//
+//func ParseCodeBlockBorderLine(line string) *CodeBlockBorderLine {
+//	re := regexp.MustCompile("```(\\w*)")
+//	match := re.FindStringSubmatch(line)
+//	if len(match) == 0 {
+//		panic("Invalid code block border line: `" + line + "'")
+//	}
+//
+//	language := match[1]
+//	return &CodeBlockBorderLine{language}
+//}
+//
+//func (l *CodeBlockBorderLine) String() string {
+//	return fmt.Sprintf("```%s", l.language)
+//}
+
+type Paragraph interface {
 	String() string
 }
 
-type EmptyLine struct {
-}
-
-func (l *EmptyLine) String() string {
-	return ""
-}
-
-type HeaderLine struct {
+type Header struct {
 	level int
 	text  string
 }
 
-func ParseHeaderLine(line string) *HeaderLine {
+func ParseHeader(line string) *Header {
 	re := regexp.MustCompile(`^(#+) (.*)$`)
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
-		panic("Invalid header line: `" + line + "'")
+		panic("Invalid header: `" + line + "'")
 	}
 
 	level := len(match[1])
 	text := match[2]
-	return &HeaderLine{level, text}
+	return &Header{level, text}
 }
 
-func (l *HeaderLine) String() string {
-	return strings.Repeat("#", l.level) + " " + l.text
+func (header *Header) String() string {
+	return strings.Repeat("#", header.level) + " " + header.text
 }
 
-type ImageLine struct {
+type Image struct {
 	caption string
 	uri     string
 }
 
-func ParseImageLine(line string) *ImageLine {
+func ParseImageLine(line string) *Image {
 	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
@@ -58,47 +67,31 @@ func ParseImageLine(line string) *ImageLine {
 
 	caption := match[1]
 	uri := match[2]
-	return &ImageLine{caption, uri}
+	return &Image{caption, uri}
 }
 
-func (l *ImageLine) String() string {
-	return fmt.Sprintf("![%s](%s)", l.caption, l.uri)
+func (image *Image) String() string {
+	return fmt.Sprintf("![%s](%s)", image.caption, image.uri)
 }
 
-type CodeBlockBorderLine struct {
-	language string // may be empty
+type NormalParagraph struct {
+	lines []string
 }
 
-func ParseCodeBlockBorderLine(line string) *CodeBlockBorderLine {
-	re := regexp.MustCompile("```(\\w*)")
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid code block border line: `" + line + "'")
+func (p *NormalParagraph) String() string {
+	var buffer bytes.Buffer
+	for i, line := range p.lines {
+		buffer.WriteString(line)
+		if i < len(p.lines)-1 {
+			buffer.WriteString("\n")
+		}
 	}
-
-	language := match[1]
-	return &CodeBlockBorderLine{language}
-}
-
-func (l *CodeBlockBorderLine) String() string {
-	return fmt.Sprintf("```%s", l.language)
-}
-
-type NormalLine struct {
-	text string
-}
-
-func (l *NormalLine) String() string {
-	return l.text
-}
-
-type Paragraph struct {
-	lines []Line
+	return buffer.String()
 }
 
 type MarkdownDoc struct {
 	title string
-	body  []Line
+	body  []Paragraph
 }
 
 func (doc *MarkdownDoc) Title() string {
@@ -110,7 +103,7 @@ func (doc *MarkdownDoc) Body() string {
 	for i, line := range doc.body {
 		buffer.WriteString(line.String())
 		if i < len(doc.body)-1 {
-			buffer.WriteString("\n")
+			buffer.WriteString("\n\n")
 		}
 	}
 	return buffer.String()
@@ -121,42 +114,54 @@ func (doc *MarkdownDoc) Lines() int {
 }
 
 func NewMarkdownDoc(content string) MarkdownDoc {
-	lines := parse(content)
+	paragraphs := parse(content)
+	return MarkdownDoc{"", paragraphs}
 
-	title := ""
-	i := 0
-	for len(lines) > i {
-		if _, ok := lines[i].(*EmptyLine); ok { // checked type assertion
-			// do nothing
-		} else if line, ok := lines[i].(*HeaderLine); ok {
-			title = line.text
-		} else {
-			break
-		}
-		i++
-	}
-	return MarkdownDoc{title, lines[i:]}
+	//title := ""
+	//i := 0
+	//for len(lines) > i {
+	//	if _, ok := lines[i].(*EmptyLine); ok { // checked type assertion
+	//		// do nothing
+	//	} else if line, ok := lines[i].(*Header); ok {
+	//		title = line.text
+	//	} else {
+	//		break
+	//	}
+	//	i++
+	//}
+	//return MarkdownDoc{title, lines[i:]}
 }
 
-func parse(content string) []Line {
+func parse(content string) []Paragraph {
 	lines := strings.Split(content, "\n")
-	parsedLines := make([]Line, len(lines))
-	for i, line := range lines {
-		var parsed Line
+
+	paragraphs := []Paragraph{}
+	normalLines := []string{}
+	for _, line := range lines {
 		if len(line) == 0 {
-			parsed = &EmptyLine{}
+			if len(normalLines) > 0 {
+				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
+				normalLines = []string{}
+			}
 		} else if strings.HasPrefix(line, "#") {
-			parsed = ParseHeaderLine(line)
+			if len(normalLines) > 0 {
+				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
+				normalLines = []string{}
+			}
+			paragraphs = append(paragraphs, ParseHeader(line))
 		} else if strings.HasPrefix(line, "!") {
-			parsed = ParseImageLine(line)
-		} else if strings.HasPrefix(line, "```") {
-			parsed = ParseCodeBlockBorderLine(line)
+			if len(normalLines) > 0 {
+				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
+				normalLines = []string{}
+			}
+			paragraphs = append(paragraphs, ParseImageLine(line))
+			//} else if strings.HasPrefix(line, "```") {
+			//	parsed = ParseCodeBlockBorderLine(line)
 		} else {
-			parsed = &NormalLine{line}
+			normalLines = append(normalLines, line)
 		}
-		parsedLines[i] = parsed
 	}
-	return parsedLines
+	return paragraphs
 }
 
 func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
@@ -170,47 +175,46 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 
 func (doc *MarkdownDoc) Show() {
 	fmt.Printf("(title) %s\n", doc.title)
-	for _, line := range doc.body {
-		switch line.(type) {
-		case *EmptyLine:
-			fmt.Print("(empty line)")
-		case *HeaderLine:
-			headerLine := line.(*HeaderLine)
+	for _, paragraph := range doc.body {
+		switch paragraph.(type) {
+		case *Header:
+			headerLine := paragraph.(*Header)
 			fmt.Printf("(header %d) %s", headerLine.level, headerLine.text)
-		case *ImageLine:
-			imageLine := line.(*ImageLine)
+		case *Image:
+			imageLine := paragraph.(*Image)
 			fmt.Printf("(image) %s", imageLine.caption)
-		case *CodeBlockBorderLine:
-			codeBlockBorderLine := line.(*CodeBlockBorderLine)
-			fmt.Printf("(code block border) language = '%s'", codeBlockBorderLine.language)
-		case *NormalLine:
-			fmt.Print(line.String())
+		//case *CodeBlockBorderLine:
+		//	codeBlockBorderLine := line.(*CodeBlockBorderLine)
+		//	fmt.Printf("(code block border) language = '%s'", codeBlockBorderLine.language)
+		case *NormalParagraph:
+			fmt.Print(paragraph.String())
 		}
+		fmt.Println()
 		fmt.Println()
 	}
 }
 
 func (doc *MarkdownDoc) PrependLines(lines []string) {
-	normalLines := make([]Line, len(lines))
-	for i, line := range lines {
-		normalLines[i] = &NormalLine{line}
-	}
-	doc.body = append(normalLines, doc.body...)
+	//normalLines := make([]Line, len(lines))
+	//for i, line := range lines {
+	//	normalLines[i] = &NormalLine{line}
+	//}
+	//doc.body = append(normalLines, doc.body...)
 }
 
 func (doc *MarkdownDoc) AppendLines(lines []string) {
-	for _, line := range lines {
-		doc.body = append(doc.body, &NormalLine{line})
-	}
+	//for _, line := range lines {
+	//	doc.body = append(doc.body, &NormalLine{line})
+	//}
 }
 
 func (doc *MarkdownDoc) InsertLines(n int, lines []string) {
-	// TODO index check
-	normalLines := make([]Line, len(lines))
-	for i, line := range lines {
-		normalLines[i] = &NormalLine{line}
-	}
-	doc.body = append(doc.body[:n], append(normalLines, doc.body[n:]...)...)
+	//// TODO index check
+	//normalLines := make([]Line, len(lines))
+	//for i, line := range lines {
+	//	normalLines[i] = &NormalLine{line}
+	//}
+	//doc.body = append(doc.body[:n], append(normalLines, doc.body[n:]...)...)
 }
 
 func (doc *MarkdownDoc) TransferLinkToFootNote() {
@@ -232,17 +236,17 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 }
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
-	for _, line := range doc.body {
-		if imageLine, ok := line.(*ImageLine); ok {
-			imageFileName := filepath.Base(imageLine.uri)
-			u := url.URL{}
-			err := copier.Copy(&u, &baseUrl)
-			if err != nil {
-				return err
-			}
-			u.Path = path.Join(u.Path, imageFileName)
-			imageLine.uri = u.String()
-		}
-	}
+	//for _, line := range doc.body {
+	//	if imageLine, ok := line.(*Image); ok {
+	//		imageFileName := filepath.Base(imageLine.uri)
+	//		u := url.URL{}
+	//		err := copier.Copy(&u, &baseUrl)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		u.Path = path.Join(u.Path, imageFileName)
+	//		imageLine.uri = u.String()
+	//	}
+	//}
 	return nil
 }
