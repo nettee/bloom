@@ -3,8 +3,11 @@ package model
 import (
 	"bytes"
 	"fmt"
+	"github.com/jinzhu/copier"
 	"io/ioutil"
 	"net/url"
+	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -115,28 +118,20 @@ func (doc *MarkdownDoc) Lines() int {
 
 func NewMarkdownDoc(content string) MarkdownDoc {
 	paragraphs := parse(content)
-	return MarkdownDoc{"", paragraphs}
 
-	//title := ""
-	//i := 0
-	//for len(lines) > i {
-	//	if _, ok := lines[i].(*EmptyLine); ok { // checked type assertion
-	//		// do nothing
-	//	} else if line, ok := lines[i].(*Header); ok {
-	//		title = line.text
-	//	} else {
-	//		break
-	//	}
-	//	i++
-	//}
-	//return MarkdownDoc{title, lines[i:]}
+	if len(paragraphs) > 0 {
+		if header, ok := paragraphs[0].(*Header); ok && header.level == 1 {
+			return MarkdownDoc{header.text, paragraphs[1:]}
+		}
+	}
+	return MarkdownDoc{"", paragraphs}
 }
 
 func parse(content string) []Paragraph {
 	lines := strings.Split(content, "\n")
 
-	paragraphs := []Paragraph{}
-	normalLines := []string{}
+	var paragraphs []Paragraph
+	var normalLines []string
 	for _, line := range lines {
 		if len(line) == 0 {
 			if len(normalLines) > 0 {
@@ -236,17 +231,16 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 }
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
-	//for _, line := range doc.body {
-	//	if imageLine, ok := line.(*Image); ok {
-	//		imageFileName := filepath.Base(imageLine.uri)
-	//		u := url.URL{}
-	//		err := copier.Copy(&u, &baseUrl)
-	//		if err != nil {
-	//			return err
-	//		}
-	//		u.Path = path.Join(u.Path, imageFileName)
-	//		imageLine.uri = u.String()
-	//	}
-	//}
+	for _, paragraph := range doc.body {
+		if image, ok := paragraph.(*Image); ok {
+			imageFileName := filepath.Base(image.uri)
+			u := url.URL{}
+			err := copier.Copy(&u, &baseUrl)
+			if err == nil {
+				u.Path = path.Join(u.Path, imageFileName)
+				image.uri = u.String()
+			}
+		}
+	}
 	return nil
 }
