@@ -74,6 +74,20 @@ func main() {
 				},
 			},
 			{
+				Name: "show",
+				Aliases: []string{"s"},
+				Usage: "show article details",
+				Action: func(c *cli.Context) error {
+					// TODO check arg exists
+					articlePath := c.Args().First()
+					article, err := model.NewArticle(articlePath)
+					if err != nil {
+						return err
+					}
+					return core.ShowArticle(article)
+				},
+			},
+			{
 				Name: "upload",
 				Aliases: []string{"u"},
 				Usage: "upload images",

@@ -1,19 +1,21 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/jinzhu/copier"
 	"io/ioutil"
 	"net/url"
-	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
 
+type Line struct {
+	text string
+}
+
 type MarkdownDoc struct {
 	title string
-	body  []string
+	body  []Line
 }
 
 func (doc *MarkdownDoc) Title() string {
@@ -21,7 +23,12 @@ func (doc *MarkdownDoc) Title() string {
 }
 
 func (doc *MarkdownDoc) Body() string {
-	return strings.Join(doc.body, "\n")
+	//return strings.Join(doc.body, "\n")
+	var buffer bytes.Buffer
+	for _, line := range doc.body {
+		buffer.WriteString(line.text)
+	}
+	return buffer.String()
 }
 
 func (doc *MarkdownDoc) Lines() int {
@@ -30,9 +37,14 @@ func (doc *MarkdownDoc) Lines() int {
 
 func NewMarkdownDoc(content string) MarkdownDoc {
 	title, body := separateTitle(content)
+	// TODO workaround
+	var bodyLines []Line
+	for _, line := range body {
+		bodyLines = append(bodyLines, Line{line})
+	}
 	return MarkdownDoc{
 		title: title,
-		body:  body,
+		body:  bodyLines,
 	}
 }
 
@@ -67,17 +79,26 @@ func separateTitle(content string) (string, []string) {
 	return title, body
 }
 
+func (doc *MarkdownDoc) Show() {
+	for _, line := range doc.body {
+		fmt.Println("^" + line.text + "$")
+	}
+}
+
 func (doc *MarkdownDoc) PrependLines(lines []string) {
-	doc.body = append(lines, doc.body...)
+	// TODO
+	//doc.body = append(lines, doc.body...)
 }
 
 func (doc *MarkdownDoc) AppendLines(lines []string) {
-	doc.body = append(doc.body, lines...)
+	// TODO
+	//doc.body = append(doc.body, lines...)
 }
 
 func (doc *MarkdownDoc) InsertLines(n int, lines []string) {
 	// TODO index check
-	doc.body = append(doc.body[:n], append(lines, doc.body[n:]...)...)
+	// TODO
+	//doc.body = append(doc.body[:n], append(lines, doc.body[n:]...)...)
 }
 
 // TODO omit wechat links (mp.weixin.qq.com)
@@ -92,39 +113,41 @@ func (doc *MarkdownDoc) TransferLinkToFootNote() {
 // transfer math equations: \\ to \newline
 // TODO workaround, try to parse markdown
 func (doc *MarkdownDoc) TransferMathEquationFormat() {
-	count := 0
-	for i, line := range doc.body {
-		if strings.HasSuffix(line, "\\\\") {
-			doc.body[i] = line[:len(line)-2] + "\\newline"
-			count++
-		}
-	}
-	fmt.Printf("Transfered %d math equations\n", count)
+	// TODO
+	//count := 0
+	//for i, line := range doc.body {
+	//	if strings.HasSuffix(line, "\\\\") {
+	//		doc.body[i] = line[:len(line)-2] + "\\newline"
+	//		count++
+	//	}
+	//}
+	//fmt.Printf("Transfered %d math equations\n", count)
 }
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
-	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
-	for i, line := range doc.body {
-		if !strings.HasPrefix(line, "!") {
-			continue
-		}
-		match := re.FindStringSubmatch(line)
-		if len(match) == 0 {
-			continue
-		}
-		caption := match[1]
-		imageUri := match[2]
-		imageFileName := filepath.Base(imageUri)
-
-		u := url.URL{}
-		err := copier.Copy(&u, &baseUrl)
-		if err != nil {
-			return err
-		}
-		u.Path = path.Join(u.Path, imageFileName)
-		newImageMarkdown := fmt.Sprintf("![%s](%s)", caption, u.String())
-
-		doc.body[i] = newImageMarkdown
-	}
+	// TODO
+	//re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
+	//for i, line := range doc.body {
+	//	if !strings.HasPrefix(line, "!") {
+	//		continue
+	//	}
+	//	match := re.FindStringSubmatch(line)
+	//	if len(match) == 0 {
+	//		continue
+	//	}
+	//	caption := match[1]
+	//	imageUri := match[2]
+	//	imageFileName := filepath.Base(imageUri)
+	//
+	//	u := url.URL{}
+	//	err := copier.Copy(&u, &baseUrl)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	u.Path = path.Join(u.Path, imageFileName)
+	//	newImageMarkdown := fmt.Sprintf("![%s](%s)", caption, u.String())
+	//
+	//	doc.body[i] = newImageMarkdown
+	//}
 	return nil
 }
