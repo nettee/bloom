@@ -93,24 +93,21 @@ func (doc *MarkdownDoc) Lines() int {
 }
 
 func NewMarkdownDoc(content string) MarkdownDoc {
-
 	lines := parse(content)
 
-	return MarkdownDoc{
-		title: "",
-		body:  lines,
+	title := ""
+	i := 0
+	for len(lines) > i {
+		if _, ok := lines[i].(*EmptyLine); ok { // checked type assertion
+			// do nothing
+		} else if line, ok := lines[i].(*HeaderLine); ok {
+			title = line.text
+		} else {
+			break
+		}
+		i++
 	}
-
-	//title, body := separateTitle(content)
-	//// TODO workaround
-	//var bodyLines []Line
-	//for _, line := range body {
-	//	bodyLines = append(bodyLines, &NormalLine{line})
-	//}
-	//return MarkdownDoc{
-	//	title: title,
-	//	body:  bodyLines,
-	//}
+	return MarkdownDoc{title, lines[i:]}
 }
 
 func parse(content string) []Line {
@@ -141,29 +138,8 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 	return NewMarkdownDoc(content), nil
 }
 
-func separateTitle(content string) (string, []string) {
-	lines := strings.Split(content, "\n")
-	titleLine := ""
-	i := 0
-	for len(lines) > i {
-		if lines[i] == "" {
-			// do nothing
-		} else if strings.HasPrefix(lines[i], "# ") {
-			titleLine = lines[0]
-		} else {
-			break
-		}
-		i++
-	}
-	body := lines[i:]
-
-	titleLeading := regexp.MustCompile(`^#\s+`)
-	title := string(titleLeading.ReplaceAll([]byte(titleLine), []byte("")))
-
-	return title, body
-}
-
 func (doc *MarkdownDoc) Show() {
+	fmt.Printf("(title) %s\n", doc.title)
 	for _, line := range doc.body {
 		switch line.(type) {
 		case *EmptyLine:
