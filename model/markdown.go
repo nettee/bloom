@@ -12,25 +12,6 @@ import (
 	"strings"
 )
 
-//type CodeBlockBorderLine struct {
-//	language string // may be empty
-//}
-//
-//func ParseCodeBlockBorderLine(line string) *CodeBlockBorderLine {
-//	re := regexp.MustCompile("```(\\w*)")
-//	match := re.FindStringSubmatch(line)
-//	if len(match) == 0 {
-//		panic("Invalid code block border line: `" + line + "'")
-//	}
-//
-//	language := match[1]
-//	return &CodeBlockBorderLine{language}
-//}
-//
-//func (l *CodeBlockBorderLine) String() string {
-//	return fmt.Sprintf("```%s", l.language)
-//}
-
 type Paragraph interface {
 	String() string
 }
@@ -75,6 +56,22 @@ func ParseImageLine(line string) *Image {
 
 func (image *Image) String() string {
 	return fmt.Sprintf("![%s](%s)", image.caption, image.uri)
+}
+
+type CodeBlock struct {
+	language string
+	lines    []string
+}
+
+func (codeBlock *CodeBlock) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("```%s\n", codeBlock.language))
+	for _, line := range codeBlock.lines {
+		buffer.WriteString(line)
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("```")
+	return buffer.String()
 }
 
 type NormalParagraph struct {
@@ -131,32 +128,70 @@ func parse(content string) []Paragraph {
 	lines := strings.Split(content, "\n")
 
 	var paragraphs []Paragraph
-	var normalLines []string
-	for _, line := range lines {
-		if len(line) == 0 {
-			if len(normalLines) > 0 {
-				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
-				normalLines = []string{}
+	start := -1
+
+	inCodeBlock := false
+	var language string
+
+	for i, line := range lines {
+		if inCodeBlock {
+			if strings.HasPrefix(line, "```") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &CodeBlock{language, lines[start:i]})
+					start = -1
+				} else {
+					paragraphs = append(paragraphs, &CodeBlock{language, []string{}})
+				}
+				inCodeBlock = false
+			} else {
+				if start == -1 {
+					start = i
+				}
 			}
-		} else if strings.HasPrefix(line, "#") {
-			if len(normalLines) > 0 {
-				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
-				normalLines = []string{}
-			}
-			paragraphs = append(paragraphs, ParseHeader(line))
-		} else if strings.HasPrefix(line, "!") {
-			if len(normalLines) > 0 {
-				paragraphs = append(paragraphs, &NormalParagraph{normalLines})
-				normalLines = []string{}
-			}
-			paragraphs = append(paragraphs, ParseImageLine(line))
-			//} else if strings.HasPrefix(line, "```") {
-			//	parsed = ParseCodeBlockBorderLine(line)
 		} else {
-			normalLines = append(normalLines, line)
+			if len(line) == 0 {
+				if start != -1 {
+					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
+					start = -1
+				}
+			} else if strings.HasPrefix(line, "#") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
+					start = -1
+				}
+				paragraphs = append(paragraphs, ParseHeader(line))
+			} else if strings.HasPrefix(line, "!") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
+					start = -1
+				}
+				paragraphs = append(paragraphs, ParseImageLine(line))
+			} else if strings.HasPrefix(line, "```") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
+					start = -1
+				}
+				inCodeBlock = true
+				language = ParseCodeBlockLanguage(line)
+			} else {
+				if start == -1 {
+					start = i
+				}
+			}
 		}
 	}
 	return paragraphs
+}
+
+func ParseCodeBlockLanguage(line string) string {
+	re := regexp.MustCompile("```(\\w+)")
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid code block: `" + line + "'")
+	}
+
+	language := match[1]
+	return language
 }
 
 func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
@@ -171,6 +206,7 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 func (doc *MarkdownDoc) Show() {
 	fmt.Printf("(title) %s\n", doc.title)
 	for _, paragraph := range doc.body {
+		fmt.Println("[Paragraph]")
 		switch paragraph.(type) {
 		case *Header:
 			headerLine := paragraph.(*Header)
@@ -178,13 +214,13 @@ func (doc *MarkdownDoc) Show() {
 		case *Image:
 			imageLine := paragraph.(*Image)
 			fmt.Printf("(image) %s", imageLine.caption)
-		//case *CodeBlockBorderLine:
-		//	codeBlockBorderLine := line.(*CodeBlockBorderLine)
-		//	fmt.Printf("(code block border) language = '%s'", codeBlockBorderLine.language)
+		case *CodeBlock:
+			codeBlock := paragraph.(*CodeBlock)
+			fmt.Printf("(code block) language: %s, %d lines", codeBlock.language, len(codeBlock.lines))
 		case *NormalParagraph:
 			fmt.Print(paragraph.String())
 		}
-		fmt.Println()
+
 		fmt.Println()
 	}
 }
