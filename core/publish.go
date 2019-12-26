@@ -6,6 +6,7 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/nettee/bloom/model"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -108,7 +109,24 @@ func getDocGeneral(article model.Article) (model.MarkdownDoc, error) {
 
 func transferImageUrl(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
 	baseUrlPath := os.Getenv("BLOOM_BASE_URL_PATH")
-	doc.TransferImageUrl(path.Join(baseUrlPath, article.Meta().Base.Name))
+	if len(baseUrlPath) == 0 {
+		fmt.Println("Warning: BLOOM_BASE_URL_PATH not set")
+		return doc, nil
+	}
+	host := os.Getenv("BLOOM_HOST")
+	if len(host) == 0 {
+		fmt.Println("Warning: BLOOM_HOST not set")
+		return doc, nil
+	}
+	refUrl := url.URL{
+		Scheme: "http",
+		Host:   host,
+		Path:   path.Join(baseUrlPath, article.Meta().Base.Name),
+	}
+	err := doc.TransferImageUrl(refUrl)
+	if err != nil {
+		return model.MarkdownDoc{}, nil
+	}
 	return doc, nil
 }
 
