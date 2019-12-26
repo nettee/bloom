@@ -9,8 +9,65 @@ import (
 	"strings"
 )
 
-type Line struct {
+type Line interface {
+	String() string
+}
+
+type EmptyLine struct {
+}
+
+func (l *EmptyLine) String() string {
+	return ""
+}
+
+type HeaderLine struct {
+	level int
+	text  string
+}
+
+func (l *HeaderLine) String() string {
+	return strings.Repeat("#", l.level) + " " + l.text
+}
+
+func ParseHeaderLine(line string) *HeaderLine {
+	re := regexp.MustCompile(`^(#+) (.*)$`)
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid header line: `" + line + "'")
+	}
+
+	level := len(match[1])
+	text := match[2]
+	return &HeaderLine{level, text}
+}
+
+type ImageLine struct {
+	caption string
+	uri     string
+}
+
+func (l *ImageLine) String() string {
+	return fmt.Sprintf("![%s](%s)", l.caption, l.uri)
+}
+
+func ParseImageLine(line string) *ImageLine {
+	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid image line: `" + line + "'")
+	}
+
+	caption := match[1]
+	uri := match[2]
+	return &ImageLine{caption, uri}
+}
+
+type NormalLine struct {
 	text string
+}
+
+func (l *NormalLine) String() string {
+	return l.text
 }
 
 type MarkdownDoc struct {
@@ -26,7 +83,7 @@ func (doc *MarkdownDoc) Body() string {
 	//return strings.Join(doc.body, "\n")
 	var buffer bytes.Buffer
 	for _, line := range doc.body {
-		buffer.WriteString(line.text)
+		buffer.WriteString(line.String())
 	}
 	return buffer.String()
 }
@@ -36,24 +93,51 @@ func (doc *MarkdownDoc) Lines() int {
 }
 
 func NewMarkdownDoc(content string) MarkdownDoc {
-	title, body := separateTitle(content)
-	// TODO workaround
-	var bodyLines []Line
-	for _, line := range body {
-		bodyLines = append(bodyLines, Line{line})
-	}
+
+	lines := parse(content)
+
 	return MarkdownDoc{
-		title: title,
-		body:  bodyLines,
+		title: "",
+		body:  lines,
 	}
+
+	//title, body := separateTitle(content)
+	//// TODO workaround
+	//var bodyLines []Line
+	//for _, line := range body {
+	//	bodyLines = append(bodyLines, &NormalLine{line})
+	//}
+	//return MarkdownDoc{
+	//	title: title,
+	//	body:  bodyLines,
+	//}
+}
+
+func parse(content string) []Line {
+	lines := strings.Split(content, "\n")
+	parsedLines := make([]Line, len(lines))
+	for i, line := range lines {
+		var parsed Line
+		if len(line) == 0 {
+			parsed = &EmptyLine{}
+		} else if strings.HasPrefix(line, "#") {
+			parsed = ParseHeaderLine(line)
+		} else if strings.HasPrefix(line, "!") {
+			parsed = ParseImageLine(line)
+		} else {
+			parsed = &NormalLine{line}
+		}
+		parsedLines[i] = parsed
+	}
+	return parsedLines
 }
 
 func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
-	bytes, err := ioutil.ReadFile(docFile)
+	byts, err := ioutil.ReadFile(docFile)
 	if err != nil {
 		return MarkdownDoc{}, err
 	}
-	content := string(bytes)
+	content := string(byts)
 	return NewMarkdownDoc(content), nil
 }
 
@@ -81,7 +165,19 @@ func separateTitle(content string) (string, []string) {
 
 func (doc *MarkdownDoc) Show() {
 	for _, line := range doc.body {
-		fmt.Println("^" + line.text + "$")
+		switch line.(type) {
+		case *EmptyLine:
+			fmt.Print("(empty line)")
+		case *HeaderLine:
+			headerLine := line.(*HeaderLine)
+			fmt.Printf("(header %d) %s", headerLine.level, headerLine.text)
+		case *ImageLine:
+			imageLine := line.(*ImageLine)
+			fmt.Printf("(image) %s", imageLine.caption)
+		case *NormalLine:
+			fmt.Print(line.String())
+		}
+		fmt.Println()
 	}
 }
 
