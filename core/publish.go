@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"strings"
 )
 
 const hexoProject = "/Users/william/projects/nettee.github.io"
@@ -50,21 +49,21 @@ func (publisher *Publisher) publish(article model.Article) error {
 
 var platformPublisher = map[string]Publisher{
 	"xzl": {
-		getDoc:    getDocGeneral,
+		getDoc: getDocGeneral,
 		transfers: []Transfer{
 			transferImageUrl,
 		},
-		save:      copyBody,
+		save: copyBody,
 	},
 	"wechat": {
-		getDoc:    getDocGeneral,
+		getDoc: getDocGeneral,
 		transfers: []Transfer{
 			transferImageUrl,
 		},
-		save:      copyBody,
+		save: copyBody,
 	},
 	"hexo": {
-		getDoc:  getDocGeneral,
+		getDoc: getDocGeneral,
 		transfers: []Transfer{
 			transferMathEquations,
 			addReadMoreLabel,
@@ -132,15 +131,8 @@ func transferImageUrl(article model.Article, doc model.MarkdownDoc) (model.Markd
 
 func addHexoHeaderLines(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
 	meta := article.Meta()
-	headerLines := []string{
-		"title: '" + doc.Title() + "'",
-		"date: " + meta.Base.CreateTime.Format("2006-01-02 15:04:05"),
-		"tags: [" + strings.Join(meta.Base.Tags, ", ") + "]",
-		"---",
-		"",
-	}
-
-	doc.PrependLines(headerLines)
+	header := model.HexoHeader{doc.Title(), meta.Base.CreateTime, meta.Base.Tags}
+	doc.PrependParagraph(&header)
 	return doc, nil
 }
 
@@ -153,20 +145,15 @@ func transferMathEquations(article model.Article, doc model.MarkdownDoc) (model.
 func addReadMoreLabel(article model.Article, doc model.MarkdownDoc) (model.MarkdownDoc, error) {
 	meta := article.Meta()
 	n := meta.Hexo.ReadMore
-	if n < 15 {
-		n = 15
+	if n < 6 {
+		n = 6
 	}
 
-	if doc.Lines() < n {
+	if doc.Paragraphs() < n {
 		return doc, nil
 	}
 
-	readMoreLines := []string{
-		"",
-		"<!-- more -->",
-		"",
-	}
-	doc.InsertLines(n, readMoreLines)
+	doc.InsertParagraph(n, &model.ReadMore{})
 
 	return doc, nil
 }

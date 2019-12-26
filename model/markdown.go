@@ -10,18 +10,19 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type Paragraph interface {
 	String() string
 }
 
-type Header struct {
+type Heading struct {
 	level int
 	text  string
 }
 
-func ParseHeader(line string) *Header {
+func ParseHeader(line string) *Heading {
 	re := regexp.MustCompile(`^(#+) (.*)$`)
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
@@ -30,10 +31,10 @@ func ParseHeader(line string) *Header {
 
 	level := len(match[1])
 	text := match[2]
-	return &Header{level, text}
+	return &Heading{level, text}
 }
 
-func (header *Header) String() string {
+func (header *Heading) String() string {
 	return strings.Repeat("#", header.level) + " " + header.text
 }
 
@@ -74,6 +75,21 @@ func (codeBlock *CodeBlock) String() string {
 	return buffer.String()
 }
 
+type MathBlock struct {
+	lines []string
+}
+
+func (mathBlock *MathBlock) String() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("$$\n")
+	for _, line := range mathBlock.lines {
+		buffer.WriteString(line)
+		buffer.WriteString("\n")
+	}
+	buffer.WriteString("$$")
+	return buffer.String()
+}
+
 type NormalParagraph struct {
 	lines []string
 }
@@ -87,6 +103,28 @@ func (p *NormalParagraph) String() string {
 		}
 	}
 	return buffer.String()
+}
+
+type HexoHeader struct {
+	Title      string
+	CreateTime time.Time
+	Tags       []string
+}
+
+func (hexoHeader *HexoHeader) String() string {
+	template := `title: '%s'
+date: %s
+tags: [%s]
+---`
+	return fmt.Sprintf(template, hexoHeader.Title, hexoHeader.CreateTime.Format("2006-01-02 15:04:05"),
+		strings.Join(hexoHeader.Tags, ", "))
+}
+
+type ReadMore struct {
+}
+
+func (readMore *ReadMore) String() string {
+	return "<!-- more -->"
 }
 
 type MarkdownDoc struct {
@@ -106,10 +144,11 @@ func (doc *MarkdownDoc) Body() string {
 			buffer.WriteString("\n\n")
 		}
 	}
+	buffer.WriteString("\n")
 	return buffer.String()
 }
 
-func (doc *MarkdownDoc) Lines() int {
+func (doc *MarkdownDoc) Paragraphs() int {
 	return len(doc.body)
 }
 
@@ -117,7 +156,7 @@ func NewMarkdownDoc(content string) MarkdownDoc {
 	paragraphs := parse(content)
 
 	if len(paragraphs) > 0 {
-		if header, ok := paragraphs[0].(*Header); ok && header.level == 1 {
+		if header, ok := paragraphs[0].(*Heading); ok && header.level == 1 {
 			return MarkdownDoc{header.text, paragraphs[1:]}
 		}
 	}
@@ -130,6 +169,7 @@ func parse(content string) []Paragraph {
 	var paragraphs []Paragraph
 	start := -1
 
+	inMathBlock := false
 	inCodeBlock := false
 	var language string
 
@@ -143,6 +183,20 @@ func parse(content string) []Paragraph {
 					paragraphs = append(paragraphs, &CodeBlock{language, []string{}})
 				}
 				inCodeBlock = false
+			} else {
+				if start == -1 {
+					start = i
+				}
+			}
+		} else if inMathBlock {
+			if strings.HasPrefix(line, "$$") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &MathBlock{lines[start:i]})
+					start = -1
+				} else {
+					paragraphs = append(paragraphs, &MathBlock{[]string{}})
+				}
+				inMathBlock = false
 			} else {
 				if start == -1 {
 					start = i
@@ -173,6 +227,12 @@ func parse(content string) []Paragraph {
 				}
 				inCodeBlock = true
 				language = ParseCodeBlockLanguage(line)
+			} else if strings.HasPrefix(line, "$$") {
+				if start != -1 {
+					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
+					start = -1
+				}
+				inMathBlock = true
 			} else {
 				if start == -1 {
 					start = i
@@ -208,8 +268,8 @@ func (doc *MarkdownDoc) Show() {
 	for _, paragraph := range doc.body {
 		fmt.Println("[Paragraph]")
 		switch paragraph.(type) {
-		case *Header:
-			headerLine := paragraph.(*Header)
+		case *Heading:
+			headerLine := paragraph.(*Heading)
 			fmt.Printf("(header %d) %s", headerLine.level, headerLine.text)
 		case *Image:
 			imageLine := paragraph.(*Image)
@@ -217,6 +277,9 @@ func (doc *MarkdownDoc) Show() {
 		case *CodeBlock:
 			codeBlock := paragraph.(*CodeBlock)
 			fmt.Printf("(code block) language: %s, %d lines", codeBlock.language, len(codeBlock.lines))
+		case *MathBlock:
+			mathBlock := paragraph.(*MathBlock)
+			fmt.Printf("(math block) %d lines", len(mathBlock.lines))
 		case *NormalParagraph:
 			fmt.Print(paragraph.String())
 		}
@@ -225,27 +288,17 @@ func (doc *MarkdownDoc) Show() {
 	}
 }
 
-func (doc *MarkdownDoc) PrependLines(lines []string) {
-	//normalLines := make([]Line, len(lines))
-	//for i, line := range lines {
-	//	normalLines[i] = &NormalLine{line}
-	//}
-	//doc.body = append(normalLines, doc.body...)
+func (doc *MarkdownDoc) PrependParagraph(paragraph Paragraph) {
+	doc.body = append([]Paragraph{paragraph}, doc.body...)
 }
 
-func (doc *MarkdownDoc) AppendLines(lines []string) {
-	//for _, line := range lines {
-	//	doc.body = append(doc.body, &NormalLine{line})
-	//}
+func (doc *MarkdownDoc) AppendParagraph(paragraph Paragraph) {
+	doc.body = append(doc.body, paragraph)
 }
 
-func (doc *MarkdownDoc) InsertLines(n int, lines []string) {
+func (doc *MarkdownDoc) InsertParagraph(n int, paragraph Paragraph) {
 	//// TODO index check
-	//normalLines := make([]Line, len(lines))
-	//for i, line := range lines {
-	//	normalLines[i] = &NormalLine{line}
-	//}
-	//doc.body = append(doc.body[:n], append(normalLines, doc.body[n:]...)...)
+	doc.body = append(doc.body[:n], append([]Paragraph{paragraph}, doc.body[n:]...)...)
 }
 
 func (doc *MarkdownDoc) TransferLinkToFootNote() {
@@ -253,17 +306,19 @@ func (doc *MarkdownDoc) TransferLinkToFootNote() {
 }
 
 // transfer math equations: \\ to \newline
-// TODO workaround, try to parse markdown
 func (doc *MarkdownDoc) TransferMathEquationFormat() {
-	// TODO broken
-	//count := 0
-	//for i, line := range doc.body {
-	//	if strings.HasSuffix(line, "\\\\") {
-	//		doc.body[i] = line[:len(line)-2] + "\\newline"
-	//		count++
-	//	}
-	//}
-	//fmt.Printf("Transfered %d math equations\n", count)
+	count := 0
+	for _, paragraph := range doc.body {
+		if mathBlock, ok := paragraph.(*MathBlock); ok {
+			for i, line := range mathBlock.lines {
+				if strings.HasSuffix(line, "\\\\") {
+					mathBlock.lines[i] = line[:len(line)-2] + "\\newline"
+					count++
+				}
+			}
+		}
+	}
+	fmt.Printf("Transfered %d math equations\n", count)
 }
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
