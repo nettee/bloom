@@ -152,6 +152,36 @@ func (doc *MarkdownDoc) Paragraphs() int {
 	return len(doc.body)
 }
 
+func (doc *MarkdownDoc) images() []*Image {
+	var images []*Image
+	for _, paragraph := range doc.body {
+		if image, ok := paragraph.(*Image); ok {
+			images = append(images, image)
+		}
+	}
+	return images
+}
+
+func (doc *MarkdownDoc) mathBlocks() []*MathBlock {
+	var mathBlocks []*MathBlock
+	for _, paragraph := range doc.body {
+		if mathBlock, ok := paragraph.(*MathBlock); ok {
+			mathBlocks = append(mathBlocks, mathBlock)
+		}
+	}
+	return mathBlocks
+}
+
+func (doc *MarkdownDoc) codeBlocks() []*CodeBlock {
+	var codeBlocks []*CodeBlock
+	for _, paragraph := range doc.body {
+		if codeBlock, ok := paragraph.(*CodeBlock); ok {
+			codeBlocks = append(codeBlocks, codeBlock)
+		}
+	}
+	return codeBlocks
+}
+
 func NewMarkdownDoc(content string) MarkdownDoc {
 	paragraphs := parse(content)
 
@@ -297,7 +327,10 @@ func (doc *MarkdownDoc) AppendParagraph(paragraph Paragraph) {
 }
 
 func (doc *MarkdownDoc) InsertParagraph(n int, paragraph Paragraph) {
-	//// TODO index check
+	if n < 0 || n >= len(doc.body) {
+		fmt.Printf("Warning: invalid paragraph index: %d\n", n)
+		return
+	}
 	doc.body = append(doc.body[:n], append([]Paragraph{paragraph}, doc.body[n:]...)...)
 }
 
@@ -308,13 +341,11 @@ func (doc *MarkdownDoc) TransferLinkToFootNote() {
 // transfer math equations: \\ to \newline
 func (doc *MarkdownDoc) TransferMathEquationFormat() {
 	count := 0
-	for _, paragraph := range doc.body {
-		if mathBlock, ok := paragraph.(*MathBlock); ok {
-			for i, line := range mathBlock.lines {
-				if strings.HasSuffix(line, "\\\\") {
-					mathBlock.lines[i] = line[:len(line)-2] + "\\newline"
-					count++
-				}
+	for _, mathBlock := range doc.mathBlocks() {
+		for i, line := range mathBlock.lines {
+			if strings.HasSuffix(line, "\\\\") {
+				mathBlock.lines[i] = line[:len(line)-2] + "\\newline"
+				count++
 			}
 		}
 	}
@@ -322,15 +353,13 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 }
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
-	for _, paragraph := range doc.body {
-		if image, ok := paragraph.(*Image); ok {
-			imageFileName := filepath.Base(image.uri)
-			u := url.URL{}
-			err := copier.Copy(&u, &baseUrl)
-			if err == nil {
-				u.Path = path.Join(u.Path, imageFileName)
-				image.uri = u.String()
-			}
+	for _, image := range doc.images() {
+		imageFileName := filepath.Base(image.uri)
+		u := url.URL{}
+		err := copier.Copy(&u, &baseUrl)
+		if err == nil {
+			u.Path = path.Join(u.Path, imageFileName)
+			image.uri = u.String()
 		}
 	}
 	return nil

@@ -149,10 +149,6 @@ func addReadMoreLabel(article model.Article, doc model.MarkdownDoc) (model.Markd
 		n = 6
 	}
 
-	if doc.Paragraphs() < n {
-		return doc, nil
-	}
-
 	doc.InsertParagraph(n, &model.ReadMore{})
 
 	return doc, nil
