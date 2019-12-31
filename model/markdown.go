@@ -27,30 +27,18 @@ type Heading struct {
 	text  string
 }
 
-func ParseHeading(line string) *Heading {
-	re := regexp.MustCompile(`^(#+) (.*)$`)
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid header: `" + line + "'")
-	}
-
-	level := len(match[1])
-	text := match[2]
-	return &Heading{level, text}
-}
-
 func (heading *Heading) String() string {
 	return strings.Repeat("#", heading.level) + " " + heading.text
 }
 
 type NormalParagraph struct {
-	lines []string
+	lines []Line
 }
 
 func (p *NormalParagraph) String() string {
 	var buffer bytes.Buffer
 	for i, line := range p.lines {
-		buffer.WriteString(line)
+		buffer.WriteString(line.text)
 		if i < len(p.lines)-1 {
 			buffer.WriteString("\n")
 		}
@@ -61,18 +49,6 @@ func (p *NormalParagraph) String() string {
 type Image struct {
 	caption string
 	uri     string
-}
-
-func ParseImageLine(line string) *Image {
-	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid image line: `" + line + "'")
-	}
-
-	caption := match[1]
-	uri := match[2]
-	return &Image{caption, uri}
 }
 
 func (image *Image) String() string {
@@ -90,14 +66,14 @@ func (image *Image) IsOnline() bool {
 
 type CodeBlock struct {
 	language string
-	lines    []string
+	lines    []Line
 }
 
 func (codeBlock *CodeBlock) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("```%s\n", codeBlock.language))
 	for _, line := range codeBlock.lines {
-		buffer.WriteString(line)
+		buffer.WriteString(line.text)
 		buffer.WriteString("\n")
 	}
 	buffer.WriteString("```")
@@ -105,14 +81,14 @@ func (codeBlock *CodeBlock) String() string {
 }
 
 type MathBlock struct {
-	lines []string
+	lines []Line
 }
 
 func (mathBlock *MathBlock) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("$$\n")
 	for _, line := range mathBlock.lines {
-		buffer.WriteString(line)
+		buffer.WriteString(line.text)
 		buffer.WriteString("\n")
 	}
 	buffer.WriteString("$$")
@@ -207,89 +183,121 @@ func NewMarkdownDoc(content string) MarkdownDoc {
 	return MarkdownDoc{"", paragraphs}
 }
 
+type Line struct {
+	text string
+}
+
+func (l *Line) isEmpty() bool {
+	return len(l.text) == 0
+}
+
+func (l *Line) isHeading() bool {
+	return strings.HasPrefix(l.text, "#")
+}
+
+func (l *Line) isImage() bool {
+	return strings.HasPrefix(l.text, "!")
+}
+
+func (l *Line) isMathBlockBorder() bool {
+	return strings.HasPrefix(l.text, "$$")
+}
+
+func (l *Line) isCodeBlockBorder() bool {
+	return strings.HasPrefix(l.text, "```")
+}
+
+func (l *Line) isBorder() bool {
+	return l.isHeading() || l.isImage() || l.isMathBlockBorder() || l.isCodeBlockBorder()
+}
+
 func parse(content string) []Paragraph {
-	lines := strings.Split(content, "\n")
+	var lines []Line
+	for _, line := range strings.Split(content, "\n") {
+		lines = append(lines, Line{line})
+	}
+	return parseLines(lines)
+}
 
+func parseLines(lines []Line) []Paragraph {
 	var paragraphs []Paragraph
-	start := -1
-
-	// TODO parse line first
+	var currentLines []Line
 
 	inMathBlock := false
 	inCodeBlock := false
 	var language string
 
-	for i, line := range lines {
+	for _, line := range lines {
 		if inCodeBlock {
-			if strings.HasPrefix(line, "```") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &CodeBlock{language, lines[start:i]})
-					start = -1
-				} else {
-					paragraphs = append(paragraphs, &CodeBlock{language, []string{}})
-				}
+			if line.isCodeBlockBorder() {
+				paragraphs = append(paragraphs, &CodeBlock{language, currentLines})
+				currentLines = nil
 				inCodeBlock = false
 			} else {
-				if start == -1 {
-					start = i
-				}
+				currentLines = append(currentLines, line)
 			}
 		} else if inMathBlock {
-			if strings.HasPrefix(line, "$$") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &MathBlock{lines[start:i]})
-					start = -1
-				} else {
-					paragraphs = append(paragraphs, &MathBlock{[]string{}})
-				}
+			if line.isMathBlockBorder() {
+				paragraphs = append(paragraphs, &MathBlock{currentLines})
+				currentLines = nil
 				inMathBlock = false
 			} else {
-				if start == -1 {
-					start = i
-				}
+				currentLines = append(currentLines, line)
 			}
 		} else {
-			if len(line) == 0 {
-				if start != -1 {
-					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
-					start = -1
+			if line.isEmpty() {
+				if len(currentLines) > 0 {
+					paragraphs = append(paragraphs, &NormalParagraph{currentLines})
+					currentLines = nil
 				}
-			} else if strings.HasPrefix(line, "#") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
-					start = -1
+			} else if line.isBorder() {
+				if len(currentLines) > 0 {
+					paragraphs = append(paragraphs, &NormalParagraph{currentLines})
+					currentLines = nil
 				}
-				paragraphs = append(paragraphs, ParseHeading(line))
-			} else if strings.HasPrefix(line, "!") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
-					start = -1
+				if line.isHeading() {
+					paragraphs = append(paragraphs, parseHeading(line.text))
+				} else if line.isImage() {
+					paragraphs = append(paragraphs, parseImageLine(line.text))
+				} else if line.isCodeBlockBorder() {
+					inCodeBlock = true
+					language = parseCodeBlockLanguage(line.text)
+				} else if line.isMathBlockBorder() {
+					inMathBlock = true
 				}
-				paragraphs = append(paragraphs, ParseImageLine(line))
-			} else if strings.HasPrefix(line, "```") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
-					start = -1
-				}
-				inCodeBlock = true
-				language = ParseCodeBlockLanguage(line)
-			} else if strings.HasPrefix(line, "$$") {
-				if start != -1 {
-					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
-					start = -1
-				}
-				inMathBlock = true
 			} else {
-				if start == -1 {
-					start = i
-				}
+				currentLines = append(currentLines, line)
 			}
 		}
 	}
 	return paragraphs
 }
 
-func ParseCodeBlockLanguage(line string) string {
+func parseHeading(line string) *Heading {
+	re := regexp.MustCompile(`^(#+) (.*)$`)
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid header: `" + line + "'")
+	}
+
+	level := len(match[1])
+	text := match[2]
+	return &Heading{level, text}
+}
+
+func parseImageLine(line string) *Image {
+	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
+	match := re.FindStringSubmatch(line)
+	if len(match) == 0 {
+		panic("Invalid image line: `" + line + "'")
+	}
+
+	caption := match[1]
+	uri := match[2]
+	return &Image{caption, uri}
+}
+
+func parseCodeBlockLanguage(line string) string {
 	re := regexp.MustCompile("```(\\w+)")
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
@@ -312,7 +320,8 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 func (doc *MarkdownDoc) Show() {
 	fmt.Printf("(title) %s\n", doc.title)
 	for _, paragraph := range doc.body {
-		fmt.Println("[Paragraph]")
+		//fmt.Println("[Paragraph]")
+		fmt.Println()
 		switch paragraph.(type) {
 		case *Heading:
 			headerLine := paragraph.(*Heading)
@@ -359,8 +368,9 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 	count := 0
 	for _, mathBlock := range doc.mathBlocks() {
 		for i, line := range mathBlock.lines {
-			if strings.HasSuffix(line, "\\\\") {
-				mathBlock.lines[i] = line[:len(line)-2] + "\\newline"
+			text := line.text
+			if strings.HasSuffix(text, "\\\\") {
+				mathBlock.lines[i].text = text[:len(text)-2] + "\\newline"
 				count++
 			}
 		}
