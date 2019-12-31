@@ -17,12 +17,17 @@ type Paragraph interface {
 	String() string
 }
 
+type BundledParagraph interface {
+	Paragraphs() []Paragraph
+	String() string
+}
+
 type Heading struct {
 	level int
 	text  string
 }
 
-func ParseHeader(line string) *Heading {
+func ParseHeading(line string) *Heading {
 	re := regexp.MustCompile(`^(#+) (.*)$`)
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
@@ -34,8 +39,23 @@ func ParseHeader(line string) *Heading {
 	return &Heading{level, text}
 }
 
-func (header *Heading) String() string {
-	return strings.Repeat("#", header.level) + " " + header.text
+func (heading *Heading) String() string {
+	return strings.Repeat("#", heading.level) + " " + heading.text
+}
+
+type NormalParagraph struct {
+	lines []string
+}
+
+func (p *NormalParagraph) String() string {
+	var buffer bytes.Buffer
+	for i, line := range p.lines {
+		buffer.WriteString(line)
+		if i < len(p.lines)-1 {
+			buffer.WriteString("\n")
+		}
+	}
+	return buffer.String()
 }
 
 type Image struct {
@@ -57,6 +77,15 @@ func ParseImageLine(line string) *Image {
 
 func (image *Image) String() string {
 	return fmt.Sprintf("![%s](%s)", image.caption, image.uri)
+}
+
+func (image *Image) IsLocal() bool {
+	return !image.IsOnline()
+}
+
+func (image *Image) IsOnline() bool {
+	return strings.HasPrefix(image.uri, "http://") ||
+		strings.HasPrefix(image.uri, "https://")
 }
 
 type CodeBlock struct {
@@ -87,21 +116,6 @@ func (mathBlock *MathBlock) String() string {
 		buffer.WriteString("\n")
 	}
 	buffer.WriteString("$$")
-	return buffer.String()
-}
-
-type NormalParagraph struct {
-	lines []string
-}
-
-func (p *NormalParagraph) String() string {
-	var buffer bytes.Buffer
-	for i, line := range p.lines {
-		buffer.WriteString(line)
-		if i < len(p.lines)-1 {
-			buffer.WriteString("\n")
-		}
-	}
 	return buffer.String()
 }
 
@@ -199,6 +213,8 @@ func parse(content string) []Paragraph {
 	var paragraphs []Paragraph
 	start := -1
 
+	// TODO parse line first
+
 	inMathBlock := false
 	inCodeBlock := false
 	var language string
@@ -243,7 +259,7 @@ func parse(content string) []Paragraph {
 					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
 					start = -1
 				}
-				paragraphs = append(paragraphs, ParseHeader(line))
+				paragraphs = append(paragraphs, ParseHeading(line))
 			} else if strings.HasPrefix(line, "!") {
 				if start != -1 {
 					paragraphs = append(paragraphs, &NormalParagraph{lines[start:i]})
@@ -354,12 +370,14 @@ func (doc *MarkdownDoc) TransferMathEquationFormat() {
 
 func (doc *MarkdownDoc) TransferImageUrl(baseUrl url.URL) error {
 	for _, image := range doc.images() {
-		imageFileName := filepath.Base(image.uri)
-		u := url.URL{}
-		err := copier.Copy(&u, &baseUrl)
-		if err == nil {
-			u.Path = path.Join(u.Path, imageFileName)
-			image.uri = u.String()
+		if image.IsLocal() {
+			imageFileName := filepath.Base(image.uri)
+			u := url.URL{}
+			err := copier.Copy(&u, &baseUrl)
+			if err == nil {
+				u.Path = path.Join(u.Path, imageFileName)
+				image.uri = u.String()
+			}
 		}
 	}
 	return nil
