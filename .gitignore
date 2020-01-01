@@ -1,2 +1,5 @@
 # GoLand files
 .idea/
+
+# Python virtualenv
+/venv/
