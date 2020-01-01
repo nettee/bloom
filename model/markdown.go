@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -173,7 +172,8 @@ func (doc *MarkdownDoc) codeBlocks() []*CodeBlock {
 }
 
 func NewMarkdownDoc(content string) MarkdownDoc {
-	paragraphs := parse(content)
+	parser := NewParser(content)
+	paragraphs := parser.parse()
 
 	if len(paragraphs) > 0 {
 		if header, ok := paragraphs[0].(*Heading); ok && header.level == 1 {
@@ -181,131 +181,6 @@ func NewMarkdownDoc(content string) MarkdownDoc {
 		}
 	}
 	return MarkdownDoc{"", paragraphs}
-}
-
-type Line struct {
-	text string
-}
-
-func (l *Line) isEmpty() bool {
-	return len(l.text) == 0
-}
-
-func (l *Line) isHeading() bool {
-	return strings.HasPrefix(l.text, "#")
-}
-
-func (l *Line) isImage() bool {
-	return strings.HasPrefix(l.text, "!")
-}
-
-func (l *Line) isMathBlockBorder() bool {
-	return strings.HasPrefix(l.text, "$$")
-}
-
-func (l *Line) isCodeBlockBorder() bool {
-	return strings.HasPrefix(l.text, "```")
-}
-
-func (l *Line) isBorder() bool {
-	return l.isHeading() || l.isImage() || l.isMathBlockBorder() || l.isCodeBlockBorder()
-}
-
-func parse(content string) []Paragraph {
-	var lines []Line
-	for _, line := range strings.Split(content, "\n") {
-		lines = append(lines, Line{line})
-	}
-	return parseLines(lines)
-}
-
-func parseLines(lines []Line) []Paragraph {
-	var paragraphs []Paragraph
-	var currentLines []Line
-
-	inMathBlock := false
-	inCodeBlock := false
-	var language string
-
-	for _, line := range lines {
-		if inCodeBlock {
-			if line.isCodeBlockBorder() {
-				paragraphs = append(paragraphs, &CodeBlock{language, currentLines})
-				currentLines = nil
-				inCodeBlock = false
-			} else {
-				currentLines = append(currentLines, line)
-			}
-		} else if inMathBlock {
-			if line.isMathBlockBorder() {
-				paragraphs = append(paragraphs, &MathBlock{currentLines})
-				currentLines = nil
-				inMathBlock = false
-			} else {
-				currentLines = append(currentLines, line)
-			}
-		} else {
-			if line.isEmpty() {
-				if len(currentLines) > 0 {
-					paragraphs = append(paragraphs, &NormalParagraph{currentLines})
-					currentLines = nil
-				}
-			} else if line.isBorder() {
-				if len(currentLines) > 0 {
-					paragraphs = append(paragraphs, &NormalParagraph{currentLines})
-					currentLines = nil
-				}
-				if line.isHeading() {
-					paragraphs = append(paragraphs, parseHeading(line.text))
-				} else if line.isImage() {
-					paragraphs = append(paragraphs, parseImageLine(line.text))
-				} else if line.isCodeBlockBorder() {
-					inCodeBlock = true
-					language = parseCodeBlockLanguage(line.text)
-				} else if line.isMathBlockBorder() {
-					inMathBlock = true
-				}
-			} else {
-				currentLines = append(currentLines, line)
-			}
-		}
-	}
-	return paragraphs
-}
-
-func parseHeading(line string) *Heading {
-	re := regexp.MustCompile(`^(#+) (.*)$`)
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid header: `" + line + "'")
-	}
-
-	level := len(match[1])
-	text := match[2]
-	return &Heading{level, text}
-}
-
-func parseImageLine(line string) *Image {
-	re := regexp.MustCompile(`!\[(.*)]\((.*)\)`)
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid image line: `" + line + "'")
-	}
-
-	caption := match[1]
-	uri := match[2]
-	return &Image{caption, uri}
-}
-
-func parseCodeBlockLanguage(line string) string {
-	re := regexp.MustCompile("```(\\w+)")
-	match := re.FindStringSubmatch(line)
-	if len(match) == 0 {
-		panic("Invalid code block: `" + line + "'")
-	}
-
-	language := match[1]
-	return language
 }
 
 func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
@@ -320,12 +195,12 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 func (doc *MarkdownDoc) Show() {
 	fmt.Printf("(title) %s\n", doc.title)
 	for _, paragraph := range doc.body {
-		//fmt.Println("[Paragraph]")
-		fmt.Println()
+		fmt.Println("[Paragraph]")
+		//fmt.Println()
 		switch paragraph.(type) {
 		case *Heading:
 			headerLine := paragraph.(*Heading)
-			fmt.Printf("(header %d) %s", headerLine.level, headerLine.text)
+			fmt.Printf("(heading %d) %s", headerLine.level, headerLine.text)
 		case *Image:
 			imageLine := paragraph.(*Image)
 			fmt.Printf("(image) %s", imageLine.caption)
