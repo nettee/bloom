@@ -83,8 +83,14 @@ func (parser *Parser) consumeWhile(predicate LinePredicate) []Line {
 	return lines
 }
 
-func (parser *Parser) parse() []Paragraph {
-	return parser.parseParagraphs()
+func (parser *Parser) parse() MarkdownDoc {
+	paragraphs := parser.parseParagraphs()
+	if len(paragraphs) > 0 {
+		if header, ok := paragraphs[0].(*Heading); ok && header.level == 1 {
+			return MarkdownDoc{header.text, paragraphs[1:]}
+		}
+	}
+	return MarkdownDoc{"", paragraphs}
 }
 
 func (parser *Parser) parseParagraphs() []Paragraph {
@@ -150,7 +156,7 @@ func (parser *Parser) parseQuote() Paragraph {
 		lines[i].unindent()
 	}
 	subParser := Parser{lines, 0}
-	paragraphs := subParser.parse()
+	paragraphs := subParser.parseParagraphs()
 	return &Quote{paragraphs}
 }
 

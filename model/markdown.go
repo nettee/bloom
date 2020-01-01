@@ -158,6 +158,17 @@ func (doc *MarkdownDoc) Body() string {
 	return buffer.String()
 }
 
+func (doc *MarkdownDoc) String() string {
+	if len(doc.title) == 0 {
+		return doc.Body()
+	} else {
+		template := `# %s
+
+%s`
+		return fmt.Sprintf(template, doc.Title(), doc.Body())
+	}
+}
+
 func (doc *MarkdownDoc) Paragraphs() int {
 	return len(doc.body)
 }
@@ -200,14 +211,7 @@ func (doc *MarkdownDoc) codeBlocks() []*CodeBlock {
 
 func NewMarkdownDoc(content string) MarkdownDoc {
 	parser := NewParser(content)
-	paragraphs := parser.parse()
-
-	if len(paragraphs) > 0 {
-		if header, ok := paragraphs[0].(*Heading); ok && header.level == 1 {
-			return MarkdownDoc{header.text, paragraphs[1:]}
-		}
-	}
-	return MarkdownDoc{"", paragraphs}
+	return parser.parse()
 }
 
 func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
@@ -220,34 +224,7 @@ func ReadMarkdownDocFromFile(docFile string) (MarkdownDoc, error) {
 }
 
 func (doc *MarkdownDoc) Show() {
-	fmt.Printf("(title) %s\n", doc.title)
-	for _, paragraph := range doc.body {
-		fmt.Println("[Paragraph]")
-		//fmt.Println()
-		switch paragraph.(type) {
-		case *Heading:
-			headerLine := paragraph.(*Heading)
-			fmt.Printf("(heading %d) %s", headerLine.level, headerLine.text)
-		case *Image:
-			imageLine := paragraph.(*Image)
-			fmt.Printf("(image) %s", imageLine.caption)
-		case *Quote:
-			quote := paragraph.(*Quote)
-			fmt.Println("(quote start)")
-			fmt.Println(ParagraphString(quote))
-			fmt.Print("(quote end)")
-		case *CodeBlock:
-			codeBlock := paragraph.(*CodeBlock)
-			fmt.Printf("(code block) language: %s, %d lines", codeBlock.language, len(codeBlock.lines))
-		case *MathBlock:
-			mathBlock := paragraph.(*MathBlock)
-			fmt.Printf("(math block) %d lines", len(mathBlock.lines))
-		default:
-			fmt.Print(ParagraphString(paragraph))
-		}
-
-		fmt.Println()
-	}
+	fmt.Println(doc.String())
 }
 
 func (doc *MarkdownDoc) PrependParagraph(paragraph Paragraph) {
