@@ -1,12 +1,24 @@
 package model
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
 
 type Line struct {
 	text string
+}
+
+func (l *Line) unindent() {
+	re := regexp.MustCompile(`^>\s*(.*)$`)
+	match := re.FindStringSubmatch(l.text)
+	if len(match) == 0 {
+		fmt.Println("not match")
+		return
+	}
+	fmt.Printf("match: `%s'\n", match[1])
+	l.text = match[1]
 }
 
 func (l *Line) isEmpty() bool {
@@ -19,6 +31,10 @@ func (l *Line) isHeading() bool {
 
 func (l *Line) isImage() bool {
 	return strings.HasPrefix(l.text, "!")
+}
+
+func (l *Line) isQuoted() bool {
+	return strings.HasPrefix(l.text, ">")
 }
 
 func (l *Line) isMathBlockBorder() bool {
@@ -85,6 +101,8 @@ func (parser *Parser) parseParagraphs() []Paragraph {
 			p = parser.parseHeading()
 		} else if line.isImage() {
 			p = parser.parseImage()
+		} else if line.isQuoted() {
+			p = parser.parseQuote()
 		} else if line.isCodeBlockBorder() {
 			p = parser.parseCodeBlock()
 		} else if line.isMathBlockBorder() {
@@ -127,6 +145,18 @@ func (parser *Parser) parseImage() Paragraph {
 	return &Image{caption, uri}
 }
 
+func (parser *Parser) parseQuote() Paragraph {
+	lines := parser.consumeWhile(func(line Line) bool {
+		return line.isQuoted()
+	})
+	for i := range lines {
+		lines[i].unindent()
+	}
+	subParser := Parser{lines, 0}
+	paragraphs := subParser.parse()
+	return &Quote{paragraphs}
+}
+
 func (parser *Parser) parseCodeBlock() Paragraph {
 	language := parseCodeBlockLanguage(parser.consumeLine())
 	lines := parser.consumeWhile(func(line Line) bool {
@@ -138,7 +168,7 @@ func (parser *Parser) parseCodeBlock() Paragraph {
 
 func parseCodeBlockLanguage(line1 Line) string {
 	line := line1.text
-	re := regexp.MustCompile("```(\\w+)")
+	re := regexp.MustCompile("```(\\w*)")
 	match := re.FindStringSubmatch(line)
 	if len(match) == 0 {
 		panic("Invalid code block: `" + line + "'")

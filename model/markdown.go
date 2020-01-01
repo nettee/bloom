@@ -13,12 +13,11 @@ import (
 )
 
 type Paragraph interface {
-	String() string
+	LineStrings() []string
 }
 
-type BundledParagraph interface {
-	Paragraphs() []Paragraph
-	String() string
+func ParagraphString(p Paragraph) string {
+	return strings.Join(p.LineStrings(), "\n")
 }
 
 type Heading struct {
@@ -30,19 +29,20 @@ func (heading *Heading) String() string {
 	return strings.Repeat("#", heading.level) + " " + heading.text
 }
 
+func (heading *Heading) LineStrings() []string {
+	return []string{heading.String()}
+}
+
 type NormalParagraph struct {
 	lines []Line
 }
 
-func (p *NormalParagraph) String() string {
-	var buffer bytes.Buffer
-	for i, line := range p.lines {
-		buffer.WriteString(line.text)
-		if i < len(p.lines)-1 {
-			buffer.WriteString("\n")
-		}
+func (p *NormalParagraph) LineStrings() []string {
+	var res []string
+	for _, l := range p.lines {
+		res = append(res, l.text)
 	}
-	return buffer.String()
+	return res
 }
 
 type Image struct {
@@ -54,6 +54,10 @@ func (image *Image) String() string {
 	return fmt.Sprintf("![%s](%s)", image.caption, image.uri)
 }
 
+func (image *Image) LineStrings() []string {
+	return []string{image.String()}
+}
+
 func (image *Image) IsLocal() bool {
 	return !image.IsOnline()
 }
@@ -63,35 +67,48 @@ func (image *Image) IsOnline() bool {
 		strings.HasPrefix(image.uri, "https://")
 }
 
+type Quote struct {
+	paragraphs []Paragraph
+}
+
+func (quote *Quote) LineStrings() []string {
+	var res []string
+	for i, paragraph := range quote.paragraphs {
+		for _, line := range paragraph.LineStrings() {
+			res = append(res, ">"+line)
+		}
+		if i < len(quote.paragraphs)-1 {
+			res = append(res, ">")
+		}
+	}
+	return res
+}
+
 type CodeBlock struct {
 	language string
 	lines    []Line
 }
 
-func (codeBlock *CodeBlock) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("```%s\n", codeBlock.language))
+func (codeBlock *CodeBlock) LineStrings() []string {
+	res := []string{"```" + codeBlock.language}
 	for _, line := range codeBlock.lines {
-		buffer.WriteString(line.text)
-		buffer.WriteString("\n")
+		res = append(res, line.text)
 	}
-	buffer.WriteString("```")
-	return buffer.String()
+	res = append(res, "```")
+	return res
 }
 
 type MathBlock struct {
 	lines []Line
 }
 
-func (mathBlock *MathBlock) String() string {
-	var buffer bytes.Buffer
-	buffer.WriteString("$$\n")
+func (mathBlock *MathBlock) LineStrings() []string {
+	res := []string{"$$"}
 	for _, line := range mathBlock.lines {
-		buffer.WriteString(line.text)
-		buffer.WriteString("\n")
+		res = append(res, line.text)
 	}
-	buffer.WriteString("$$")
-	return buffer.String()
+	res = append(res, "$$")
+	return res
 }
 
 type HexoHeader struct {
@@ -100,13 +117,13 @@ type HexoHeader struct {
 	Tags       []string
 }
 
-func (hexoHeader *HexoHeader) String() string {
-	template := `title: '%s'
-date: %s
-tags: [%s]
----`
-	return fmt.Sprintf(template, hexoHeader.Title, hexoHeader.CreateTime.Format("2006-01-02 15:04:05"),
-		strings.Join(hexoHeader.Tags, ", "))
+func (hexoHeader *HexoHeader) LineStrings() []string {
+	return []string{
+		fmt.Sprintf("title: '%s'", hexoHeader.Title),
+		fmt.Sprintf("date: %s", hexoHeader.CreateTime.Format("2006-01-02 15:04:05")),
+		fmt.Sprintf("tags: [%s]", strings.Join(hexoHeader.Tags, ", ")),
+		"---",
+	}
 }
 
 type ReadMore struct {
@@ -114,6 +131,10 @@ type ReadMore struct {
 
 func (readMore *ReadMore) String() string {
 	return "<!-- more -->"
+}
+
+func (readMore *ReadMore) LineStrings() []string {
+	return []string{readMore.String()}
 }
 
 type MarkdownDoc struct {
@@ -127,13 +148,13 @@ func (doc *MarkdownDoc) Title() string {
 
 func (doc *MarkdownDoc) Body() string {
 	var buffer bytes.Buffer
-	for i, line := range doc.body {
-		buffer.WriteString(line.String())
-		if i < len(doc.body)-1 {
-			buffer.WriteString("\n\n")
+	for _, paragraph := range doc.body {
+		for _, line := range paragraph.LineStrings() {
+			buffer.WriteString(line)
+			buffer.WriteString("\n")
 		}
+		buffer.WriteString("\n")
 	}
-	buffer.WriteString("\n")
 	return buffer.String()
 }
 
@@ -204,14 +225,19 @@ func (doc *MarkdownDoc) Show() {
 		case *Image:
 			imageLine := paragraph.(*Image)
 			fmt.Printf("(image) %s", imageLine.caption)
+		case *Quote:
+			quote := paragraph.(*Quote)
+			fmt.Println("(quote start)")
+			fmt.Println(ParagraphString(quote))
+			fmt.Print("(quote end)")
 		case *CodeBlock:
 			codeBlock := paragraph.(*CodeBlock)
 			fmt.Printf("(code block) language: %s, %d lines", codeBlock.language, len(codeBlock.lines))
 		case *MathBlock:
 			mathBlock := paragraph.(*MathBlock)
 			fmt.Printf("(math block) %d lines", len(mathBlock.lines))
-		case *NormalParagraph:
-			fmt.Print(paragraph.String())
+		default:
+			fmt.Print(ParagraphString(paragraph))
 		}
 
 		fmt.Println()
