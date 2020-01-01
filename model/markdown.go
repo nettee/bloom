@@ -164,12 +164,18 @@ func (doc *MarkdownDoc) Paragraphs() int {
 
 func (doc *MarkdownDoc) images() []*Image {
 	var images []*Image
-	for _, paragraph := range doc.body {
+	findImages(doc.body, &images)
+	return images
+}
+
+func findImages(paragraphs []Paragraph, res *[]*Image) {
+	for _, paragraph := range paragraphs {
 		if image, ok := paragraph.(*Image); ok {
-			images = append(images, image)
+			*res = append(*res, image)
+		} else if quote, ok := paragraph.(*Quote); ok {
+			findImages(quote.paragraphs, res)
 		}
 	}
-	return images
 }
 
 func (doc *MarkdownDoc) mathBlocks() []*MathBlock {

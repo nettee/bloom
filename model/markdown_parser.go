@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -14,10 +13,8 @@ func (l *Line) unindent() {
 	re := regexp.MustCompile(`^>\s*(.*)$`)
 	match := re.FindStringSubmatch(l.text)
 	if len(match) == 0 {
-		fmt.Println("not match")
 		return
 	}
-	fmt.Printf("match: `%s'\n", match[1])
 	l.text = match[1]
 }
 
