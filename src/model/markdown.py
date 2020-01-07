@@ -26,6 +26,10 @@ class Line:
     def is_code_block_border(self) -> bool:
         return self.text.startswith('```')
 
+    def unindent_quote(self):
+        if self.text.startswith('>'):
+            self.text = self.text[1:]
+
 
 class Paragraph(metaclass=ABCMeta):
 
@@ -59,6 +63,13 @@ class NormalParagraph(Paragraph):
     def line_strings(self) -> List[str]:
         return self.lines
 
+    def __repr__(self):
+        if len(self.lines) == 0:
+            lines_str = '[]'
+        else:
+            lines_str = '[\n' + '\n'.join(' ' * 4 + line for line in self.lines) + '\n]'
+        return f'NormalParagraph(lines={lines_str})'
+
 
 @dataclass
 class Image(Paragraph):
@@ -84,8 +95,14 @@ class Quote(Paragraph):
     paragraphs: List[Paragraph]
 
     def line_strings(self) -> List[str]:
-        # TODO
-        raise NotImplementedError()
+        res = []
+        for p in self.paragraphs:
+            res.extend(p.line_strings())
+        return res
+
+    def __repr__(self):
+        paragraphs_str = '\n'.join(' ' * 4 + repr(p) for p in self.paragraphs)
+        return f"Quote(paragraphs=[\n{paragraphs_str}\n]"
 
 
 @dataclass
@@ -98,6 +115,10 @@ class CodeBlock(Paragraph):
         res.extend(self.lines)
         res.append('```')
         return res
+
+    def __repr__(self):
+        lines_str = '\n'.join(' ' * 4 + line for line in self.line_strings())
+        return f"CodeBlock(language='{self.language}', lines=[\n{lines_str}\n]"
 
 
 @dataclass
@@ -227,7 +248,7 @@ class MarkdownParser:
 
     @staticmethod
     def parse_image_from_line(line: str) -> Image:
-        pattern = re.compile(r'!\[(.*)\]\((.*)\)')
+        pattern = re.compile(r'!\[(.*)\]\((.+)\)')
         m = re.match(pattern, line)
         if m is None:
             raise MarkdownParseException(f"Invalid image `{line}'")
@@ -238,7 +259,11 @@ class MarkdownParser:
 
     def parse_quote(self) -> Quote:
         lines = self.consume_while(lambda line: line.is_quoted())
-        return Quote([])
+        for line in lines:
+            line.unindent_quote()
+        sub_parser = MarkdownParser([l.text for l in lines])
+        paragraphs = sub_parser.parse_paragraphs()
+        return Quote(paragraphs)
 
     def parse_code_block(self) -> CodeBlock:
         start_line = self.consume_line()
