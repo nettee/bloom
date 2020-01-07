@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from model.markdown import MarkdownDoc, MarkdownParser
+from model.markdown import MarkdownDoc, MarkdownParser, Image
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,22 @@ def test_parse_heading():
     assert heading.text == 'Some Text'
     print()
     print(repr(heading))
+
+
+def test_parse_image():
+    caption = 'some caption'
+    uri = 'some/uri.jpg'
+    image = Image(caption=caption, uri=uri)
+    line = str(image)
+    image = MarkdownParser.parse_image_from_line(line)
+    assert image.caption == caption
+    assert image.uri == uri
+
+
+def test_parse_code_language():
+    line = '```java'
+    language = MarkdownParser.parse_code_language_from_line(line)
+    assert language == 'java'
 
 
 if __name__ == '__main__':

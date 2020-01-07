@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import re
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import List
+from typing import List, Callable
 
 
 @dataclass
@@ -157,18 +159,18 @@ class MarkdownDoc:
     body: List[Paragraph]
 
     @staticmethod
-    def from_file(filename):
+    def from_file(filename: str) -> MarkdownDoc:
         print('\n\n')
         with open(filename, 'r') as f:
             lines = f.readlines()
         return MarkdownDoc.from_lines([line.strip('\n') for line in lines])
 
     @staticmethod
-    def from_string(content):
+    def from_string(content: str) -> MarkdownDoc:
         return MarkdownDoc.from_lines(content.split('\n'))
 
     @staticmethod
-    def from_lines(lines):
+    def from_lines(lines: List[str]) -> MarkdownDoc:
         parser = MarkdownParser.from_lines(lines)
         return parser.parse()
 
@@ -184,17 +186,18 @@ class MarkdownParseException(Exception):
     pass
 
 
+# TODO add more type hints
 class MarkdownParser:
 
     @staticmethod
-    def from_lines(lines):
+    def from_lines(lines: List[str]) -> MarkdownParser:
         return MarkdownParser(lines)
 
     @staticmethod
-    def from_string(content):
+    def from_string(content: str) -> MarkdownParser:
         return MarkdownParser.from_lines(content.split('\n'))
 
-    def __init__(self, lines):
+    def __init__(self, lines: List[str]):
         self.lines = lines
         self.pos = 0
 
@@ -292,7 +295,7 @@ class MarkdownParser:
         lines = self.consume_while(lambda line: not line.is_empty())
         return NormalParagraph([l.text for l in lines])
 
-    def consume_while(self, predicate) -> List[Line]:
+    def consume_while(self, predicate: Callable[[Line], bool]) -> List[Line]:
         lines = []
         while not self.eof() and predicate(self.next_line()):
             lines.append(self.consume_line())
