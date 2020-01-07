@@ -7,7 +7,7 @@ from model.article import Article
 class Bloom:
     """Blog output manager"""
 
-    def publish(self, article_path='.'):
+    def publish(self, article_path: str = '.'):
         article = Article(article_path)
         publish(article)
 

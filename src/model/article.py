@@ -1,13 +1,50 @@
+import pprint
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import List
 
+import toml
+
+meta_file_name = 'meta.toml'
+
+
+@dataclass
+class BaseInfo:
+    name: str
+    type_: str
+    doc_name: str
+    title_en: str
+    title_cn: str
+    create_time: datetime
+    tags: List[str]
+
+
+@dataclass
+class HexoInfo:
+    read_more: int
+
+
+@dataclass
 class MetaInfo:
-    pass
+    base: BaseInfo
+    hexo: HexoInfo
+
+    @staticmethod
+    def read_from_file(file: Path):
+        with file.open('r') as f:
+            t = toml.load(f)
+            pp = pprint.PrettyPrinter()
+            pp.pprint(t)
 
 
 class Article:
+    path: str
+    meta: MetaInfo
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
-        self.meta = None # TODO
+        self.meta = None  # TODO
 
     def __str__(self):
         return self.path
