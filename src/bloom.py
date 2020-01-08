@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import fire
 
 from core.publish import publish
@@ -7,7 +9,7 @@ from model.article import Article
 class Bloom:
     """Blog output manager"""
 
-    def publish(self, article_path: str = '.'):
+    def publish(self, article_path: Path = Path('.')):
         article = Article(article_path)
         publish(article)
 

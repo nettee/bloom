@@ -1,6 +1,8 @@
-import pprint
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import List
 
@@ -9,20 +11,32 @@ import toml
 meta_file_name = 'meta.toml'
 
 
+class Category(Enum):
+    Article = 'article'
+
+    @classmethod
+    def _missing_(cls, value) -> Category:
+        return Category.Article
+
+
 @dataclass
 class BaseInfo:
     name: str
-    type_: str
-    doc_name: str
-    title_en: str
-    title_cn: str
-    create_time: datetime
-    tags: List[str]
+    docName: str
+    titleEn: str
+    titleCn: str
+    createTime: datetime
+    category: Category = field(default=Category.Article)
+    tags: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if isinstance(self.category, str):
+            self.category = Category(self.category)
 
 
 @dataclass
 class HexoInfo:
-    read_more: int
+    readMore: int = field(default=6)
 
 
 @dataclass
@@ -30,30 +44,32 @@ class MetaInfo:
     base: BaseInfo
     hexo: HexoInfo
 
+    def __post_init__(self):
+        if isinstance(self.base, dict):
+            self.base = BaseInfo(**self.base)
+        if isinstance(self.hexo, dict):
+            self.hexo = HexoInfo(**self.hexo)
+
     @staticmethod
-    def read_from_file(file: Path):
+    def read(file: Path):
         with file.open('r') as f:
             t = toml.load(f)
-            pp = pprint.PrettyPrinter()
-            pp.pprint(t)
+            meta = MetaInfo(**t)
+        return meta
 
 
+@dataclass(init=False)
 class Article:
-    path: str
-    meta: MetaInfo
+    path: Path
+    meta: MetaInfo = field(repr=False)
 
-    def __init__(self, path: str):
+    def __init__(self, path: Path) -> None:
         self.path = path
-        self.meta = None  # TODO
+        self.read_meta()
 
-    def __str__(self):
-        return self.path
-
-    def __repr__(self):
-        return f'Article[path={self.path}]'
-
-    def meta_path(self):
-        pass
+    def read_meta(self) -> None:
+        meta_path = self.path / meta_file_name
+        self.meta = MetaInfo.read(meta_path)
 
     def doc_path(self):
         pass

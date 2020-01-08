@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from model.article import Article
 
 
@@ -6,5 +8,5 @@ def publish(article: Article):
 
 
 if __name__ == '__main__':
-    article_path = '/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md'
+    article_path = Path('/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md')
     publish(Article(article_path))
