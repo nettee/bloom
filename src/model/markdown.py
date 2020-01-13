@@ -3,7 +3,8 @@ from __future__ import annotations
 import re
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import List, Callable
+from pathlib import Path
+from typing import List, Callable, Union, TextIO
 
 
 @dataclass
@@ -159,11 +160,11 @@ class MarkdownDoc:
     body: List[Paragraph]
 
     @staticmethod
-    def from_file(filename: str) -> MarkdownDoc:
+    def from_file(file: Path) -> MarkdownDoc:
         print('\n\n')
-        with open(filename, 'r') as f:
+        with file.open('r') as f:
             lines = f.readlines()
-        return MarkdownDoc.from_lines([line.strip('\n') for line in lines])
+            return MarkdownDoc.from_lines([line.strip('\n') for line in lines])
 
     @staticmethod
     def from_string(content: str) -> MarkdownDoc:

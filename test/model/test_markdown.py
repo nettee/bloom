@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -6,7 +7,7 @@ from model.markdown import MarkdownDoc, MarkdownParser, Image
 
 logger = logging.getLogger(__name__)
 
-doc_path = '/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md'
+doc_path = Path('/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md')
 
 
 def test_from_file():

@@ -8,6 +8,8 @@ from typing import List, Union
 
 import toml
 
+from model.markdown import MarkdownDoc
+
 
 class Category(Enum):
     Article = 'article'
@@ -66,9 +68,9 @@ class Article:
 
     def __init__(self, path: Path) -> None:
         self.path = path
-        self.read_meta()
+        self._read_meta()
 
-    def read_meta(self) -> None:
+    def _read_meta(self) -> None:
         meta_path = self.path_to(Article.META_FILE_NAME)
         self.meta = MetaInfo.read(meta_path)
 
@@ -80,6 +82,12 @@ class Article:
 
     def path_to(self, sub_path: Union[str, Path]) -> Path:
         return self.path / sub_path
+
+    def read_doc(self) -> MarkdownDoc:
+        doc_file = self.path_to(self.meta.base.docName)
+        if not doc_file.exists():
+            raise RuntimeError(f'doc file not exists: {doc_file}')
+        return MarkdownDoc.from_file(doc_file)
 
     def find_markdown_files(self):
         pass
