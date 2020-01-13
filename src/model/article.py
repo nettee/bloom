@@ -4,11 +4,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import toml
-
-meta_file_name = 'meta.toml'
 
 
 class Category(Enum):
@@ -29,7 +27,7 @@ class BaseInfo:
     category: Category = field(default=Category.Article)
     tags: List[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if isinstance(self.category, str):
             self.category = Category(self.category)
 
@@ -63,24 +61,27 @@ class Article:
     path: Path
     meta: MetaInfo = field(repr=False)
 
+    META_FILE_NAME = 'meta.toml'
+    IMAGE_DIR_NAME = 'img'
+
     def __init__(self, path: Path) -> None:
         self.path = path
         self.read_meta()
 
     def read_meta(self) -> None:
-        meta_path = self.path / meta_file_name
+        meta_path = self.path_to(Article.META_FILE_NAME)
         self.meta = MetaInfo.read(meta_path)
 
-    def doc_path(self):
-        pass
+    def doc_path(self) -> Path:
+        return self.path_to(self.meta.base.docName)
 
-    def path_to(self):
-        pass
+    def image_path(self) -> Path:
+        return self.path_to(Article.IMAGE_DIR_NAME)
+
+    def path_to(self, sub_path: Union[str, Path]) -> Path:
+        return self.path / sub_path
 
     def find_markdown_files(self):
-        pass
-
-    def image_path(self):
         pass
 
     def update(self, meta):
