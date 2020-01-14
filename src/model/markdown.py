@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import reduce
 from pathlib import Path
-from typing import List, Callable, Union, TextIO
+from typing import List, Callable, cast
 
 
 @dataclass
@@ -97,11 +98,14 @@ class Image(Paragraph):
 class Quote(Paragraph):
     paragraphs: List[Paragraph]
 
+    # TODO nested quote
     def line_strings(self) -> List[str]:
-        res = []
-        for p in self.paragraphs:
-            res.extend(p.line_strings())
-        return res
+        def f(left: List[str], right: List[str]):
+            left.append('')
+            left.extend(right)
+            return left
+        lines = reduce(f, (p.line_strings() for p in self.paragraphs))
+        return ['>' + line for line in lines]
 
     def __repr__(self):
         paragraphs_str = '\n'.join(' ' * 4 + repr(p) for p in self.paragraphs)
@@ -156,8 +160,8 @@ class ReadMore(Paragraph):
 
 @dataclass
 class MarkdownDoc:
-    title: str
-    body: List[Paragraph]
+    title: str = field(default='')
+    body: List[Paragraph] = field(default_factory=list)
 
     @staticmethod
     def from_file(file: Path) -> MarkdownDoc:
@@ -175,6 +179,9 @@ class MarkdownDoc:
         parser = MarkdownParser.from_lines(lines)
         return parser.parse()
 
+    def body_string(self) -> str:
+        return '\n\n'.join(p.string() for p in self.body)
+
     # For debug only
     def _show(self) -> None:
         print('title:', self.title)
@@ -187,7 +194,6 @@ class MarkdownParseException(Exception):
     pass
 
 
-# TODO add more type hints
 class MarkdownParser:
 
     @staticmethod
@@ -204,7 +210,11 @@ class MarkdownParser:
 
     def parse(self) -> MarkdownDoc:
         paragraphs = self.parse_paragraphs()
-        return MarkdownDoc(title='', body=paragraphs)
+        if len(paragraphs) > 0 and isinstance(paragraphs[0], Heading):
+            title = cast(Heading, paragraphs[0]).text
+            return MarkdownDoc(title=title, body=paragraphs[1:])
+        else:
+            return MarkdownDoc(body=paragraphs)
 
     def parse_paragraphs(self) -> List[Paragraph]:
         paragraphs = []
@@ -262,7 +272,7 @@ class MarkdownParser:
         return Image(caption=caption, uri=uri)
 
     def parse_quote(self) -> Quote:
-        lines = self.consume_while(lambda line: line.is_quoted())
+        lines = self.consume_while(lambda l: l.is_quoted())
         for line in lines:
             line.unindent_quote()
         sub_parser = MarkdownParser([l.text for l in lines])
@@ -356,4 +366,3 @@ class TitledMdDoc(MdDoc):
 
     def text(self):
         return f'{self.title}\n\n{self.text}'
-
