@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Type, Optional
 
 import toml
 
@@ -25,7 +25,7 @@ class BaseInfo:
     docName: str
     titleEn: str
     titleCn: str
-    createTime: datetime
+    createTime: datetime = field(default=datetime.now())
     category: Category = field(default=Category.Article)
     tags: List[str] = field(default_factory=list)
 
@@ -42,7 +42,7 @@ class HexoInfo:
 @dataclass
 class MetaInfo:
     base: BaseInfo
-    hexo: HexoInfo
+    hexo: Optional[HexoInfo] = field(default=None)
 
     def __post_init__(self):
         if isinstance(self.base, dict):
@@ -58,7 +58,7 @@ class MetaInfo:
         return meta
 
 
-@dataclass(init=False)
+@dataclass
 class Article:
     path: Path
     meta: MetaInfo = field(repr=False)
@@ -66,13 +66,14 @@ class Article:
     META_FILE_NAME = 'meta.toml'
     IMAGE_DIR_NAME = 'img'
 
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self._read_meta()
+    @classmethod
+    def create(cls, path:Path, meta: MetaInfo) -> Article:
+        return Article(path, meta)
 
-    def _read_meta(self) -> None:
-        meta_path = self.path_to(Article.META_FILE_NAME)
-        self.meta = MetaInfo.read(meta_path)
+    @classmethod
+    def open(cls, path: Path) -> Article:
+        meta = MetaInfo.read(path / Article.META_FILE_NAME)
+        return Article(path, meta)
 
     def doc_path(self) -> Path:
         return self.path_to(self.meta.base.docName)

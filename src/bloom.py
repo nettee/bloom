@@ -10,7 +10,7 @@ class Bloom:
     """Blog output manager"""
 
     def publish(self, article_path: Path = Path('.')):
-        article = Article(article_path)
+        article = Article.open(article_path)
         publish(article)
 
 

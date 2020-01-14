@@ -136,4 +136,4 @@ def publish(article: Article, platform: Platform):
 
 if __name__ == '__main__':
     article_path = get_bloomstore() / 'LeetCode 例题精讲/03-从二叉树遍历到回溯算法'
-    publish(Article(article_path), platform=Platform.Xiaozhuanlan)
+    publish(Article.open(article_path), platform=Platform.Xiaozhuanlan)

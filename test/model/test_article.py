@@ -13,5 +13,5 @@ def test_meta_read():
 
 def test_new_article():
     print()
-    article = Article(article_path)
+    article = Article.open(article_path)
     print(article)

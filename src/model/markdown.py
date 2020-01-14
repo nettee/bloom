@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import List, Callable, cast, Type, TypeVar
+from typing import List, Callable, cast, Type, TypeVar, Optional
 
 
 @dataclass
@@ -35,6 +35,17 @@ class Line:
             self.text = self.text[1:]
 
 
+@dataclass
+class Link:
+    text: str
+    url: str
+
+    PATTERN = re.compile(r'\[(.*?)\]\((.+?)\)')
+
+    def __str__(self):
+        return f'[{self.text}]({self.url})'
+
+
 class Paragraph(metaclass=ABCMeta):
 
     @abstractmethod
@@ -49,6 +60,7 @@ class Paragraph(metaclass=ABCMeta):
 
 
 P = TypeVar('P', bound=Paragraph)
+ParagraphPredicate = Callable[[Paragraph], bool]
 
 
 @dataclass
@@ -186,24 +198,33 @@ class MarkdownDoc:
         return '\n\n'.join(p.string() for p in self.body)
 
     def images(self) -> List[Image]:
-        return self.find_paragraph(Image)
+        return self._find_paragraph_by_class(Image)
 
     def math_blocks(self) -> List[MathBlock]:
-        return self.find_paragraph(MathBlock)
+        return self._find_paragraph_by_class(MathBlock)
 
-    def find_paragraph(self, cls: Type[P]) -> List[P]:
+    def _find_paragraph_by_class(self, cls: Type[P]) -> List[P]:
         res = []
-        MarkdownDoc.find_paragraph_rec(self.body, cls, res)
+        MarkdownDoc._find_paragraph_by_class_rec(self.body, cls, res)
         return res
 
     @staticmethod
-    def find_paragraph_rec(paragraphs: List[Paragraph], cls: Type[P], res: List[P]):
+    def _find_paragraph_by_class_rec(paragraphs: List[Paragraph], cls: Type[P], res: List[P]) -> None:
         for p in paragraphs:
             if isinstance(p, cls):
                 res.append(p)
             elif isinstance(p, Quote):
                 quote = cast(Quote, p)
-                MarkdownDoc.find_paragraph_rec(quote.paragraphs, cls, res)
+                MarkdownDoc._find_paragraph_by_class_rec(quote.paragraphs, cls, res)
+
+    def find_one(self, test: ParagraphPredicate) -> Optional[Paragraph]:
+        for p in self.body:
+            if test(p):
+                return p
+        return None
+
+    def find_all(self, test: ParagraphPredicate) -> List[Paragraph]:
+        return [p for p in self.body if test(p)]
 
     def transfer_image_uri(self, test: Callable[[Image], bool], transfer: Callable[[str], str]) -> int:
         """

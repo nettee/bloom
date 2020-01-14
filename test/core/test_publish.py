@@ -6,7 +6,7 @@ from core.publish import publish
 from model.article import Article
 
 article_path = Path('/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/')
-article = Article(article_path)
+article = Article.open(article_path)
 
 
 class TestPublish:
