@@ -32,11 +32,10 @@ class PublishProcess:
     save: Save = field(default=lambda article, doc: None)
 
 
-def transfer_image_uri(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
-    base_url_path = settings.image.base_url_path
-    article_name = article.meta.base.name
-
+def transfer_image_uri_as_public(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     def transfer(uri: str) -> str:
+        base_url_path = settings.image.base_url_path
+        article_name = article.meta.base.name
         file_name = Path(uri).name
         url_path = Path(base_url_path).joinpath(article_name, file_name)
         url = ParseResult(
@@ -49,13 +48,19 @@ def transfer_image_uri(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
         ).geturl()
         return url
 
-    doc.transfer_image_uri(lambda image: image.is_local(), transfer)
+    doc.transfer_image_uri(
+        test=lambda image: image.is_local(),
+        transfer=transfer,
+    )
     return doc
 
 
-def transfer_math_equations(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
-    # TODO
-    print('transfer_math_equations')
+# Hexo only support '\newline' rather than '\\' in math equations
+def transfer_math_equations_newline(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    doc.transfer_math_block_by_line(
+        test=lambda line: line.endswith(r'\\'),
+        transfer=lambda line: line[:-2] + r'\newline',
+    )
     return doc
 
 
@@ -68,6 +73,7 @@ def add_read_more_label(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
 def add_hexo_header_lines(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     # TODO
     print('add_hexo_header_lines')
+    return doc
 
 
 def copy_body(article: Article, doc: MarkdownDoc) -> None:
@@ -85,22 +91,22 @@ def export_to_hexo(article: Article, doc: MarkdownDoc) -> None:
     print('export_to_hexo')
 
 
-platform_publishes = {
+platform_processes = {
     Platform.Xiaozhuanlan: PublishProcess(
         transfers=[
-            transfer_image_uri,
+            transfer_image_uri_as_public,
         ],
         save=copy_body,
     ),
     Platform.WeChat: PublishProcess(
         transfers=[
-            transfer_image_uri
+            transfer_image_uri_as_public
         ],
         save=copy_body,
     ),
     Platform.Hexo: PublishProcess(
         transfers=[
-            transfer_math_equations,
+            transfer_math_equations_newline,
             add_read_more_label,
             add_hexo_header_lines
         ],
@@ -108,7 +114,7 @@ platform_publishes = {
     ),
     Platform.Zhihu: PublishProcess(
         transfers=[
-            transfer_image_uri,
+            transfer_image_uri_as_public,
         ],
         save=save_body_to_temp,
     ),
@@ -120,7 +126,7 @@ def publish(article: Article, platform: Platform):
     print('publishing', article.path)
     doc = article.read_doc()
 
-    process = platform_publishes[platform]
+    process = platform_processes[platform]
 
     for t in process.transfers:
         doc = t(article, doc)

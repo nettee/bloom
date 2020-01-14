@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass, field
 from functools import reduce
 from pathlib import Path
-from typing import List, Callable, cast
+from typing import List, Callable, cast, Type, TypeVar
 
 
 @dataclass
@@ -46,6 +46,9 @@ class Paragraph(metaclass=ABCMeta):
 
     def __str__(self):
         return self.string()
+
+
+P = TypeVar('P', bound=Paragraph)
 
 
 @dataclass
@@ -183,21 +186,47 @@ class MarkdownDoc:
         return '\n\n'.join(p.string() for p in self.body)
 
     def images(self) -> List[Image]:
-        def find_images(paragraphs: List[Paragraph], res: List[Image]):
-            for p in paragraphs:
-                if isinstance(p, Image):
-                    res.append(p)
-                elif isinstance(p, Quote):
-                    quote = cast(Quote, p)
-                    find_images(quote.paragraphs, res)
+        return self.find_paragraph(Image)
+
+    def math_blocks(self) -> List[MathBlock]:
+        return self.find_paragraph(MathBlock)
+
+    def find_paragraph(self, cls: Type[P]) -> List[P]:
         res = []
-        find_images(self.body, res)
+        MarkdownDoc.find_paragraph_rec(self.body, cls, res)
         return res
 
-    def transfer_image_uri(self, filter: Callable[[Image], bool], transfer: Callable[[str], str]):
+    @staticmethod
+    def find_paragraph_rec(paragraphs: List[Paragraph], cls: Type[P], res: List[P]):
+        for p in paragraphs:
+            if isinstance(p, cls):
+                res.append(p)
+            elif isinstance(p, Quote):
+                quote = cast(Quote, p)
+                MarkdownDoc.find_paragraph_rec(quote.paragraphs, cls, res)
+
+    def transfer_image_uri(self, test: Callable[[Image], bool], transfer: Callable[[str], str]) -> int:
+        """
+        returns: number of transfers
+        """
+        count = 0
         for image in self.images():
-            if filter(image):
+            if test(image):
                 image.uri = transfer(image.uri)
+                count += 1
+        return count
+
+    def transfer_math_block_by_line(self, test: Callable[[str], bool], transfer: Callable[[str], str]) -> int:
+        """
+        returns: number of transfers
+        """
+        count = 0
+        for math_block in self.math_blocks():
+            for i, line in enumerate(math_block.lines):
+                if test(line):
+                    math_block.lines[i] = transfer(line)
+                    count += 1
+        return count
 
     # For debug only
     def _show(self) -> None:
