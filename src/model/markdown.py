@@ -182,6 +182,23 @@ class MarkdownDoc:
     def body_string(self) -> str:
         return '\n\n'.join(p.string() for p in self.body)
 
+    def images(self) -> List[Image]:
+        def find_images(paragraphs: List[Paragraph], res: List[Image]):
+            for p in paragraphs:
+                if isinstance(p, Image):
+                    res.append(p)
+                elif isinstance(p, Quote):
+                    quote = cast(Quote, p)
+                    find_images(quote.paragraphs, res)
+        res = []
+        find_images(self.body, res)
+        return res
+
+    def transfer_image_uri(self, filter: Callable[[Image], bool], transfer: Callable[[str], str]):
+        for image in self.images():
+            if filter(image):
+                image.uri = transfer(image.uri)
+
     # For debug only
     def _show(self) -> None:
         print('title:', self.title)

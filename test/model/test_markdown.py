@@ -1,13 +1,13 @@
 import logging
-from pathlib import Path
 
 import pytest
 
+from base.config import get_bloomstore
 from model.markdown import MarkdownDoc, MarkdownParser, Image
 
 logger = logging.getLogger(__name__)
 
-doc_path = Path('/Users/william/bloomstore/LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md')
+doc_path = get_bloomstore() / 'LeetCode 例题精讲/03-从二叉树遍历到回溯算法/03-从二叉树遍历到回溯算法.md'
 
 
 def test_from_file():
@@ -38,6 +38,13 @@ def test_parse_code_language():
     line = '```java'
     language = MarkdownParser.parse_code_language_from_line(line)
     assert language == 'java'
+
+
+def test_find_images():
+    doc = MarkdownDoc.from_file(doc_path)
+    for image in doc.images():
+        print(image)
+    # TODO add assertions
 
 
 if __name__ == '__main__':

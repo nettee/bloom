@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import List, Callable
+from urllib.parse import ParseResult
 
 import pyperclip
 
-from base.config import get_bloomstore
+from base.config import get_bloomstore, settings
 from model.article import Article
 from model.markdown import MarkdownDoc
 
@@ -29,16 +31,25 @@ class PublishProcess:
     transfers: List[Transfer] = field(default_factory=list)
     save: Save = field(default=lambda article, doc: None)
 
-    def with_transfer(self, t: Transfer):
-        self.transfers.append(t)
 
-    def with_save(self, s: Save):
-        self.save = s
+def transfer_image_uri(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    base_url_path = settings.image.base_url_path
+    article_name = article.meta.base.name
 
+    def transfer(uri: str) -> str:
+        file_name = Path(uri).name
+        url_path = Path(base_url_path).joinpath(article_name, file_name)
+        url = ParseResult(
+            scheme='http',
+            netloc=settings.image.host,
+            path=str(url_path),
+            params='',
+            query='',
+            fragment='',
+        ).geturl()
+        return url
 
-def transfer_image_url(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
-    # TODO
-    print('transfer_image_url')
+    doc.transfer_image_uri(lambda image: image.is_local(), transfer)
     return doc
 
 
@@ -60,10 +71,7 @@ def add_hexo_header_lines(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
 
 
 def copy_body(article: Article, doc: MarkdownDoc) -> None:
-    # TODO
-    print('copy_body')
-    content = doc.body_string()
-    pyperclip.copy(content)
+    pyperclip.copy(doc.body_string())
     print('document body copied to clipboard')
 
 
@@ -80,13 +88,13 @@ def export_to_hexo(article: Article, doc: MarkdownDoc) -> None:
 platform_publishes = {
     Platform.Xiaozhuanlan: PublishProcess(
         transfers=[
-            transfer_image_url,
+            transfer_image_uri,
         ],
         save=copy_body,
     ),
     Platform.WeChat: PublishProcess(
         transfers=[
-            transfer_image_url
+            transfer_image_uri
         ],
         save=copy_body,
     ),
@@ -100,10 +108,11 @@ platform_publishes = {
     ),
     Platform.Zhihu: PublishProcess(
         transfers=[
-            transfer_image_url,
+            transfer_image_uri,
         ],
         save=save_body_to_temp,
     ),
+    Platform.Default: PublishProcess(),
 }
 
 

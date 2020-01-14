@@ -2,3 +2,4 @@ fire
 toml
 pytest
 pyperclip
+dacite
