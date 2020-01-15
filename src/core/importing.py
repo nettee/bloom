@@ -6,7 +6,7 @@ from typing import List, Callable, Optional
 from urllib.parse import urlparse
 
 from model.article import Article, MetaInfo, BaseInfo
-from model.markdown import MarkdownDoc, Quote, Link, Heading
+from model.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
 
 
 class Platform(Enum):
@@ -72,39 +72,59 @@ def extract_all_links(line: str) -> List[Link]:
 
 
 def extract_meta(doc: MarkdownDoc) -> MetaInfo:
+
+    name = None
+    doc_name = None
+    title_en = None
+    title_cn = None
+
     p = doc.body[0]
     assert isinstance(p, Quote)
     header = GoldMinerHeader()
     for line in p.line_strings():
         if '原文地址' in line:
-            header.original_address = extract_link(line)
+            original_address = extract_link(line)
+            title_en = original_address.text
         elif '本文永久链接' in line:
-            header.permalink = extract_link(line)
-        elif '译者' in line:
-            header.translator = extract_link(line)
-        elif '校对者' in line:
-            header.proofreader = extract_all_links(line)
+            permalink = extract_link(line)
+            url = permalink.url
+            path = Path(urlparse(url).path)
+            name = path.stem
+            doc_name = path.name
 
-    name = header.name()
-    doc_name = header.doc_name()
-    title_en = header.title_en()
     heading1: Optional[Heading] = doc.find_one(lambda p: isinstance(p, Heading) and p.level == 1)
-    title_cn = heading1.text if heading1 is not None else None
+    if heading1 is not None:
+        title_cn = heading1.text
 
     return MetaInfo(BaseInfo(name=name, docName=doc_name, titleEn=title_en, titleCn=title_cn))
 
 
 def construct_article(dest: Path, meta: MetaInfo) -> Article:
-    article_path = dest / meta.base.name
+    article_path = dest / meta.base.titleCn
     return Article(path=article_path, meta=meta)
 
 
-def strip_header_and_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
-    pass
+def extract_gold_miner_header(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    doc.header = doc.remove_start_while(lambda p: isinstance(p, Quote))
+    return doc
+
+
+def remove_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    doc.remove_end_while(lambda p: isinstance(p, Quote) or isinstance(p, HorizontalRule))
+    return doc
+
+
+def extract_title(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    heading1 = doc.remove_start(lambda p: isinstance(p, Heading) and p.level == 1)
+    if heading1 is not None:
+        doc.title = heading1.text
+    return doc
 
 
 def save_to_bloom(article: Article, doc: MarkdownDoc) -> None:
-    pass
+    print(f'Save article {article.path}')
+    article.save_meta()
+    article.save_doc(doc)
 
 
 gold_miner_process = ImportProcess(
@@ -112,7 +132,9 @@ gold_miner_process = ImportProcess(
     extract=extract_meta,
     construct=construct_article,
     transfers=[
-        strip_header_and_footer,
+        extract_gold_miner_header,
+        remove_footer,
+        extract_title,
     ],
     save=save_to_bloom,
 )
@@ -126,7 +148,11 @@ def import_from_gold_miner(doc_files: List[Path], dest: Path) -> None:
         doc = process.fetch(file)
         meta = process.extract(doc)
         article = process.construct(dest, meta)
-        print(article)
+
+        for transfer in process.transfers:
+            doc = transfer(article, doc)
+
+        process.save(article, doc)
 
 
 if __name__ == '__main__':

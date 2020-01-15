@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import List, Union, Type, Optional
+from typing import List, Union, Optional, Any, Tuple
 
 import toml
 
@@ -19,6 +19,7 @@ class Category(Enum):
         return Category.Article
 
 
+# TOML table
 @dataclass
 class BaseInfo:
     name: str
@@ -34,11 +35,37 @@ class BaseInfo:
             self.category = Category(self.category)
 
 
+# TOML table
 @dataclass
 class HexoInfo:
     readMore: int = field(default=6)
 
 
+DictItems = List[Tuple[str, Any]]
+
+
+def toml_dict_factory(items: DictItems) -> dict:
+    """
+    Serialize values of obscure types (e.g. Category) in toml.dump().
+    The dict factory will be called multiple times for a TOML document.
+    """
+    normal_types = {type(None), bool, int, float, str, datetime, list, dict}
+
+    def serialize(v: Any) -> Any:
+        if type(v) in normal_types:
+            return v
+        elif isinstance(v, Enum):
+            return v.value
+        else:
+            return str(v)
+
+    # TODO deal with nested obscure type in array
+    new_items = [(key, serialize(value)) for (key, value) in items]
+
+    return dict(new_items)
+
+
+# TOML document
 @dataclass
 class MetaInfo:
     base: BaseInfo
@@ -57,6 +84,10 @@ class MetaInfo:
             meta = MetaInfo(**t)
         return meta
 
+    def save(self, file: Path) -> None:
+        with file.open('w') as f:
+            toml.dump(asdict(self, dict_factory=toml_dict_factory), f)
+
 
 @dataclass
 class Article:
@@ -74,6 +105,9 @@ class Article:
     def open(cls, path: Path) -> Article:
         meta = MetaInfo.read(path / Article.META_FILE_NAME)
         return Article(path, meta)
+
+    def meta_path(self) -> Path:
+        return self.path / Article.META_FILE_NAME
 
     def doc_path(self) -> Path:
         return self.path_to(self.meta.base.docName)
@@ -96,5 +130,15 @@ class Article:
     def update(self, meta):
         pass
 
-    def save(self):
-        pass
+    def _mkdir(self) -> None:
+        self.path.mkdir(exist_ok=True)
+
+    def save_meta(self) -> None:
+        self._mkdir()
+        self.meta.save(self.meta_path())
+
+    def save_doc(self, doc: MarkdownDoc) -> None:
+        self._mkdir()
+        doc.save(self.doc_path())
+
+

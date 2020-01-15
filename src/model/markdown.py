@@ -18,6 +18,9 @@ class Line:
     def is_heading(self) -> bool:
         return self.text.startswith('#')
 
+    def is_hr(self) -> bool:
+        return self.text == '---' or self.text == '***'
+
     def is_image(self) -> bool:
         return self.text.startswith('!')
 
@@ -88,6 +91,16 @@ class NormalParagraph(Paragraph):
         else:
             lines_str = '[\n' + '\n'.join(' ' * 4 + line for line in self.lines) + '\n]'
         return f'NormalParagraph(lines={lines_str})'
+
+
+@dataclass
+class HorizontalRule(Paragraph):
+
+    def line_strings(self) -> List[str]:
+        return [self.__str__()]
+
+    def __str__(self):
+        return '---'
 
 
 @dataclass
@@ -177,6 +190,8 @@ class ReadMore(Paragraph):
 class MarkdownDoc:
     title: str = field(default='')
     body: List[Paragraph] = field(default_factory=list)
+    header: List[Paragraph] = field(default_factory=list)
+    footer: List[Paragraph] = field(default_factory=list)
 
     @staticmethod
     def from_file(file: Path) -> MarkdownDoc:
@@ -194,8 +209,32 @@ class MarkdownDoc:
         parser = MarkdownParser.from_lines(lines)
         return parser.parse()
 
+    def string(self) -> str:
+        res = self.title_string() + '\n\n'
+        if len(self.header) > 0:
+            res += self.header_string()
+            res += '\n\n'
+            res += str(HorizontalRule())
+            res += '\n\n'
+        res += self.body_string()
+        if len(self.footer) > 0:
+            res += '\n\n'
+            res += str(HorizontalRule())
+            res += '\n\n'
+            res += self.footer_string()
+        return res
+
+    def title_string(self) -> str:
+        return str(Heading(1, self.title))
+
     def body_string(self) -> str:
         return '\n\n'.join(p.string() for p in self.body)
+
+    def header_string(self) -> str:
+        return '\n\n'.join(p.string() for p in self.header)
+
+    def footer_string(self) -> str:
+        return '\n\n'.join(p.string() for p in self.footer)
 
     def images(self) -> List[Image]:
         return self._find_paragraph_by_class(Image)
@@ -226,6 +265,44 @@ class MarkdownDoc:
     def find_all(self, test: ParagraphPredicate) -> List[Paragraph]:
         return [p for p in self.body if test(p)]
 
+    def remove_start(self, test: ParagraphPredicate) -> Optional[Paragraph]:
+        if len(self.body) > 0 and test(self.body[0]):
+            res = self.body[0]
+            self.body = self.body[1:]
+            return res
+        else:
+            return None
+
+    def remove_start_while(self, test: ParagraphPredicate) -> List[Paragraph]:
+        i = 0
+        while i < len(self.body) and test(self.body[i]):
+            i += 1
+        res = self.body[:i]
+        self.body = self.body[i:]
+        return res
+
+    def remove_start_until(self, test: ParagraphPredicate) -> List[Paragraph]:
+        return self.remove_start_while(lambda p: not test(p))
+
+    def remove_end(self, test: ParagraphPredicate) -> Optional[Paragraph]:
+        if len(self.body) > 0 and test(self.body[-1]):
+            res = self.body[-1]
+            self.body = self.body[:-1]
+            return res
+        else:
+            return None
+
+    def remove_end_while(self, test: ParagraphPredicate) -> List[Paragraph]:
+        i = len(self.body)
+        while i > 0 and test(self.body[i-1]):
+            i -= 1
+        res = self.body[i:]
+        self.body = self.body[:i]
+        return res
+
+    def remove_end_until(self, test: ParagraphPredicate) -> List[Paragraph]:
+        return self.remove_end_while(lambda p: not test(p))
+
     def transfer_image_uri(self, test: Callable[[Image], bool], transfer: Callable[[str], str]) -> int:
         """
         returns: number of transfers
@@ -255,6 +332,10 @@ class MarkdownDoc:
         for paragraph in self.body:
             print(repr(paragraph))
             print()
+
+    def save(self, path: Path) -> None:
+        with path.open('w') as f:
+            print(self.string(), file=f)
 
 
 class MarkdownParseException(Exception):
@@ -297,6 +378,8 @@ class MarkdownParser:
         line = self.next_line()
         if line.is_heading():
             return self.parse_heading()
+        elif line.is_hr():
+            return self.parse_hr()
         elif line.is_image():
             return self.parse_image()
         elif line.is_quoted():
@@ -322,6 +405,10 @@ class MarkdownParser:
         level = len(m.group(1))
         text = m.group(2)
         return Heading(level=level, text=text)
+
+    def parse_hr(self) -> HorizontalRule:
+        self.consume_line()
+        return HorizontalRule()
 
     def parse_image(self) -> Image:
         line = self.consume_line()
