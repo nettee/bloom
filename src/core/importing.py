@@ -88,6 +88,7 @@ def extract_meta(doc: MarkdownDoc) -> MetaInfo:
             docName=doc_name,
             titleEn=title_en,
             titleCn=title_cn,
+            tags=['翻译'],
         ),
         translation=TranslationInfo(
             originalUrl=original_url,
@@ -157,13 +158,14 @@ def import_from_gold_miner(doc_files: List[Path], dest: Path) -> None:
 
 
 if __name__ == '__main__':
-    dir = Path('/home/william/projects/gold-miner/TODO1/')
     files = [
         'tutorial-write-a-shell-in-c.md',
-        # 'writing-a-microservice-in-rust.md',
-        # 'retries-timeouts-backoff.md',
-        # 'how_to_prep_your_github_for_job_seeking.md',
+        'writing-a-microservice-in-rust.md',
+        'retries-timeouts-backoff.md',
+        'blazingly-fast-parsing-part-1-optimizing-the-scanner.md',
+        'how_to_prep_your_github_for_job_seeking.md',
     ]
+    dir = Path('/home/william/projects/gold-miner/TODO1/')
     docs = [dir / file for file in files]
     dest = Path('/home/william/bloomstore/掘金翻译计划')
     import_from_gold_miner(docs, dest)
