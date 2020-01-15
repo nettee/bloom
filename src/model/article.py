@@ -41,6 +41,21 @@ class HexoInfo:
     readMore: int = field(default=6)
 
 
+# TOML table
+@dataclass
+class GoldMinerTranslationInfo:
+    postUrl: str
+
+
+# TOML table
+@dataclass
+class TranslationInfo:
+    originalUrl: Optional[str] = field(default=None)
+    translatorName: Optional[str] = field(default=None)
+    translatorPage: Optional[str] = field(default=None)
+    goldMiner: Optional[GoldMinerTranslationInfo] = field(default=None)
+
+
 DictItems = List[Tuple[str, Any]]
 
 
@@ -70,7 +85,9 @@ def toml_dict_factory(items: DictItems) -> dict:
 class MetaInfo:
     base: BaseInfo
     hexo: Optional[HexoInfo] = field(default=None)
+    translation: Optional[TranslationInfo] = field(default=None)
 
+    # TODO remove this, use from_dict
     def __post_init__(self):
         if isinstance(self.base, dict):
             self.base = BaseInfo(**self.base)

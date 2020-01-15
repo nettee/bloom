@@ -1,11 +1,11 @@
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
 from typing import List, Callable, Optional
 from urllib.parse import urlparse
 
-from model.article import Article, MetaInfo, BaseInfo
+from model.article import Article, MetaInfo, BaseInfo, TranslationInfo, GoldMinerTranslationInfo
 from model.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
 
 
@@ -29,28 +29,6 @@ class ImportProcess:
     save: Save
 
 
-@dataclass
-class GoldMinerHeader:
-    original_address: Optional[Link] = field(default=None)
-    original_author: Optional[Link] = field(default=None)
-    permalink: Optional[Link] = field(default=None)
-    translator: Optional[Link] = field(default=None)
-    proofreader: List[Link] = field(default_factory=list)
-
-    def name(self):
-        url = self.permalink.url
-        path = urlparse(url).path
-        return Path(path).stem
-
-    def doc_name(self):
-        url = self.permalink.url
-        path = urlparse(url).path
-        return Path(path).name
-
-    def title_en(self):
-        return self.original_address.text
-    
-    
 def extract_link(line: str) -> Optional[Link]:
     m = re.search(Link.PATTERN, line)
     if m is None:
@@ -78,25 +56,48 @@ def extract_meta(doc: MarkdownDoc) -> MetaInfo:
     title_en = None
     title_cn = None
 
-    p = doc.body[0]
-    assert isinstance(p, Quote)
-    header = GoldMinerHeader()
+    original_url = None
+    translator_name = None
+    translator_page = None
+
+    p = doc.find_one(lambda p: isinstance(p, Quote))
+    assert p is not None
     for line in p.line_strings():
         if '原文地址' in line:
             original_address = extract_link(line)
             title_en = original_address.text
+            original_url = original_address.url
         elif '本文永久链接' in line:
             permalink = extract_link(line)
             url = permalink.url
             path = Path(urlparse(url).path)
             name = path.stem
             doc_name = path.name
+        elif '译者' in line:
+            translator = extract_link(line)
+            translator_name = translator.text
+            translator_page = translator.url
 
     heading1: Optional[Heading] = doc.find_one(lambda p: isinstance(p, Heading) and p.level == 1)
     if heading1 is not None:
         title_cn = heading1.text
 
-    return MetaInfo(BaseInfo(name=name, docName=doc_name, titleEn=title_en, titleCn=title_cn))
+    return MetaInfo(
+        base=BaseInfo(
+            name=name,
+            docName=doc_name,
+            titleEn=title_en,
+            titleCn=title_cn,
+        ),
+        translation=TranslationInfo(
+            originalUrl=original_url,
+            translatorName=translator_name,
+            translatorPage=translator_page,
+            goldMiner=GoldMinerTranslationInfo(
+                postUrl='',
+            ),
+        ),
+    )
 
 
 def construct_article(dest: Path, meta: MetaInfo) -> Article:
