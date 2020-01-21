@@ -8,7 +8,7 @@ from typing import List, Union, Optional, Any, Tuple
 
 import toml
 
-from model.markdown import MarkdownDoc
+from bloom.markdown import MarkdownDoc
 
 
 class Category(Enum):

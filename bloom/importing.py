@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import List, Callable, Optional
 from urllib.parse import urlparse
 
-from model.article import Article, MetaInfo, BaseInfo, TranslationInfo, GoldMinerTranslationInfo
-from model.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
+from bloom.article import Article, MetaInfo, BaseInfo, TranslationInfo, GoldMinerTranslationInfo
+from bloom.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
 
 
 class Platform(Enum):

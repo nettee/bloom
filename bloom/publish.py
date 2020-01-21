@@ -6,9 +6,9 @@ from urllib.parse import ParseResult
 
 import pyperclip
 
-from base.config import get_bloomstore, settings
-from model.article import Article
-from model.markdown import MarkdownDoc
+from bloom.config import get_bloomstore, settings
+from bloom.article import Article
+from bloom.markdown import MarkdownDoc
 
 Transfer = Callable[[Article, MarkdownDoc], MarkdownDoc]
 Save = Callable[[Article, MarkdownDoc], None]
