@@ -44,7 +44,7 @@ setup(
     python_requires='>=3.7',
     entry_points={
         'console_scripts': [
-            'bloom=bloom:main1',
+            'bloom=bloom:main',
         ],
     },
 )
