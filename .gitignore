@@ -3,6 +3,6 @@
 
 # Python files
 __pycache__/
-
-# Python virtualenv
 /venv/
+*.egg-info/
+dist/
