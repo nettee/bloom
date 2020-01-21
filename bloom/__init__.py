@@ -2,8 +2,8 @@ from pathlib import Path
 
 import fire
 
-from bloom.core.publish import publish
-from bloom.model.article import Article
+from bloom.publish import publish
+from bloom.article import Article
 
 
 class Bloom:
