@@ -195,7 +195,6 @@ class MarkdownDoc:
 
     @staticmethod
     def from_file(file: Path) -> MarkdownDoc:
-        print('\n\n')
         with file.open('r') as f:
             lines = f.readlines()
             return MarkdownDoc.from_lines([line.strip('\n') for line in lines])

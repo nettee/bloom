@@ -16,6 +16,7 @@ Save = Callable[[Article, MarkdownDoc], None]
 
 class Platform(Enum):
     Xiaozhuanlan = 'xzl'
+    Juejin = 'juejin'
     WeChat = 'wechat'
     Hexo = 'hexo'
     Zhihu = 'zhihu'
@@ -34,7 +35,7 @@ class PublishProcess:
 
 def transfer_image_uri_as_public(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     def transfer(uri: str) -> str:
-        base_url_path = settings.image.base_url_path
+        base_url_path = settings.image.baseUrlPath
         article_name = article.meta.base.name
         file_name = Path(uri).name
         url_path = Path(base_url_path).joinpath(article_name, file_name)
@@ -93,6 +94,12 @@ def export_to_hexo(article: Article, doc: MarkdownDoc) -> None:
 
 platform_processes = {
     Platform.Xiaozhuanlan: PublishProcess(
+        transfers=[
+            transfer_image_uri_as_public,
+        ],
+        save=copy_body,
+    ),
+    Platform.Juejin: PublishProcess(
         transfers=[
             transfer_image_uri_as_public,
         ],

@@ -12,8 +12,8 @@ bloomstore = '/Users/william/bloomstore'
 class ImageSetting:
     host: Optional[str] = field(default=None)
     user: Optional[str] = field(default=None)
-    base_dir: Optional[str] = field(default='.')
-    base_url_path: Optional[str] = field(default=None)
+    baseDir: Optional[str] = field(default='.')
+    baseUrlPath: Optional[str] = field(default=None)
 
 
 @dataclass
