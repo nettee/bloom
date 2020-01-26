@@ -20,11 +20,6 @@ class Platform(Enum):
     WeChat = 'wechat'
     Hexo = 'hexo'
     Zhihu = 'zhihu'
-    Default = 'default'
-
-    @classmethod
-    def _missing_(cls, value):
-        return Platform.Default
 
 
 @dataclass
@@ -125,7 +120,6 @@ platform_processes = {
         ],
         save=save_body_to_temp,
     ),
-    Platform.Default: PublishProcess(),
 }
 
 

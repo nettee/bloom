@@ -101,7 +101,11 @@ class MetaInfo:
             meta = MetaInfo(**t)
         return meta
 
-    def save(self, file: Path) -> None:
+    def save_to_directory(self, directory: Path) -> None:
+        assert directory.is_dir()
+        self.save_to_file(directory / Article.META_FILE_NAME)
+
+    def save_to_file(self, file: Path) -> None:
         with file.open('w') as f:
             toml.dump(asdict(self, dict_factory=toml_dict_factory), f)
 
@@ -152,7 +156,7 @@ class Article:
 
     def save_meta(self) -> None:
         self._mkdir()
-        self.meta.save(self.meta_path())
+        self.meta.save_to_file(self.meta_path())
 
     def save_doc(self, doc: MarkdownDoc) -> None:
         self._mkdir()
