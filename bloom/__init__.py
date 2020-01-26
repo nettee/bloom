@@ -6,6 +6,7 @@ import fire
 from bloom.article import Article
 from bloom.create import init_article
 from bloom.publish import publish, Platform
+from bloom.upload import upload
 
 
 class Bloom:
@@ -13,6 +14,10 @@ class Bloom:
 
     def init(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
         init_article(directory=directory, title_en=en, title_cn=cn)
+
+    def upload(self, directory: str = '.'):
+        article = Article.open(Path(directory))
+        upload(article)
 
     def publish(self, article_path: str, platform: str):
         article_path: Path = Path(article_path)
