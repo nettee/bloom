@@ -4,13 +4,16 @@ from typing import Optional
 import fire
 
 from bloom.article import Article
-from bloom.create import init_article
+from bloom.create import init_article, new_article
 from bloom.publish import publish, Platform
 from bloom.upload import upload
 
 
 class Bloom:
     """Blog output manager"""
+
+    def new(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
+        new_article(directory=directory, title_en=en, title_cn=cn)
 
     def init(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
         init_article(directory=directory, title_en=en, title_cn=cn)
