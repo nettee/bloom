@@ -34,9 +34,10 @@ class Line:
         return self.text.startswith('```')
 
     def unindent_quote(self):
-        if self.text.startswith('>'):
+        if self.text.startswith('> '):
+            self.text = self.text[2:]
+        elif self.text.startswith('>'):
             self.text = self.text[1:]
-            self.text = self.text.lstrip(' ')
 
 
 @dataclass
