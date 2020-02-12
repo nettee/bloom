@@ -135,7 +135,7 @@ class Quote(Paragraph):
             left.extend(right)
             return left
         lines = reduce(f, (p.line_strings() for p in self.paragraphs))
-        return ['>' + line for line in lines]
+        return ['> ' + line for line in lines]
 
     def __repr__(self):
         paragraphs_str = '\n'.join(' ' * 4 + repr(p) for p in self.paragraphs)
