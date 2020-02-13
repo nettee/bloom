@@ -12,15 +12,6 @@ def run_command(command: List[str]):
     run(command)
 
 
-def check_images(article: Article):
-    print(f'Check images for article "{article.path}" ...')
-    doc = article.read_doc()
-    for image in doc.images():
-        image_file = article.path_to(image.uri)
-        if not image_file.exists():
-            print(f'Warning: image `{image.uri}` does not exist')
-
-
 def upload_image_files(article: Article, files: List[Path]):
     name = article.meta.base.name
     user = settings.image.user
@@ -34,15 +25,17 @@ def upload_image_files(article: Article, files: List[Path]):
     run_command(scp_command)
 
 
-def upload_images(article: Article):
+def upload(article: Article, all=False):
     name = article.meta.base.name
     print(f'Uploading images for {name}...')
 
-    doc = article.read_doc()
-    image_files = [article.path_to(image.uri) for image in doc.images()]
+    if all:
+        image_files = [file for file in article.image_path().iterdir() if not file.stem.startswith('.')]
+    else:
+        doc = article.read_doc()
+        image_files = [article.path_to(image.uri) for image in doc.images()]
+        for image_file in image_files:
+            if not image_file.exists():
+                print(f'Warning: image `{str(image_file)}` does not exist')
+
     upload_image_files(article, image_files)
-
-
-def upload(article: Article):
-    check_images(article)
-    upload_images(article)
