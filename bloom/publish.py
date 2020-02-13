@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Callable
+from typing import List, Callable, Optional
 from urllib.parse import ParseResult
 
 import pyperclip
@@ -123,8 +123,13 @@ platform_processes = {
 }
 
 
-def publish(article: Article, platform: Platform):
+def publish(article: Article, platform: Optional[str], to: Optional[str]):
     print('publishing', article.path)
+
+    assert platform is not None or to is not None
+    platform: str = platform if platform is not None else to
+    platform: Platform = Platform(platform)
+
     doc = article.read_doc()
 
     process = platform_processes[platform]

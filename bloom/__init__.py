@@ -22,11 +22,10 @@ class Bloom:
         article = Article.open(Path(directory))
         upload(article, all)
 
-    def publish(self, article_path: str, platform: str):
+    def publish(self, article_path: str, platform: Optional[str] = None, to: Optional[str] = None):
         article_path: Path = Path(article_path)
-        platform: Platform = Platform(platform)
         article = Article.open(article_path)
-        publish(article, platform)
+        publish(article, platform, to)
 
 
 def main():
