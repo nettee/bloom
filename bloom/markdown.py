@@ -266,6 +266,21 @@ class MarkdownDoc:
     def find_all(self, test: ParagraphPredicate) -> List[Paragraph]:
         return [p for p in self.body if test(p)]
 
+    def find_adjacent(self, test: ParagraphPredicate) -> List[List[Paragraph]]:
+        n = len(self.body)
+        res = []
+        i = 0
+        while i < n:
+            while i < n and not test(self.body[i]):
+                i += 1
+            j = i
+            while j < n and test(self.body[j]):
+                j += 1
+            if j > i:
+                res.append(self.body[i:j])
+            i = j
+        return res
+
     def remove_start(self, test: ParagraphPredicate) -> Optional[Paragraph]:
         if len(self.body) > 0 and test(self.body[0]):
             res = self.body[0]

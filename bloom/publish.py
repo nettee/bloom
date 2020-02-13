@@ -1,14 +1,16 @@
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, cast
 from urllib.parse import ParseResult
 
 import pyperclip
+from termcolor import colored
 
 from bloom.config import get_bloomstore, settings
 from bloom.article import Article
-from bloom.markdown import MarkdownDoc
+from bloom.markdown import MarkdownDoc, CodeBlock
 
 Transfer = Callable[[Article, MarkdownDoc], MarkdownDoc]
 Save = Callable[[Article, MarkdownDoc], None]
@@ -20,6 +22,7 @@ class Platform(Enum):
     WeChat = 'wechat'
     Hexo = 'hexo'
     Zhihu = 'zhihu'
+    LeetCodeCn = 'lcn'
 
 
 @dataclass
@@ -57,6 +60,16 @@ def transfer_math_equations_newline(article: Article, doc: MarkdownDoc) -> Markd
         test=lambda line: line.endswith(r'\\'),
         transfer=lambda line: line[:-2] + r'\newline',
     )
+    return doc
+
+
+# For leetcode-cn solutions, we can write code blocks with multiple tabs
+def group_code_blocks(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    code_block_groups = doc.find_adjacent(lambda p: isinstance(p, CodeBlock))
+    for group in code_block_groups:
+        for p in group:
+            code_block: CodeBlock = p
+            code_block.language = code_block.language + ' []'
     return doc
 
 
@@ -102,7 +115,14 @@ platform_processes = {
     ),
     Platform.WeChat: PublishProcess(
         transfers=[
-            transfer_image_uri_as_public
+            transfer_image_uri_as_public,
+        ],
+        save=copy_body,
+    ),
+    Platform.LeetCodeCn: PublishProcess(
+        transfers=[
+            transfer_image_uri_as_public,
+            group_code_blocks,
         ],
         save=copy_body,
     ),
@@ -110,7 +130,7 @@ platform_processes = {
         transfers=[
             transfer_math_equations_newline,
             add_read_more_label,
-            add_hexo_header_lines
+            add_hexo_header_lines,
         ],
         save=export_to_hexo,
     ),
@@ -123,15 +143,26 @@ platform_processes = {
 }
 
 
-def publish(article: Article, platform: Optional[str], to: Optional[str]):
+def eprint(value: str, end: str = '\n') -> None:
+    print(colored(value, 'red'), end=end, file=sys.stderr)
+
+
+def publish(article: Article, platform: Optional[str] = None, to: Optional[str] = None):
     print('publishing', article.path)
 
     assert platform is not None or to is not None
     platform: str = platform if platform is not None else to
-    platform: Platform = Platform(platform)
+    try:
+        platform: Platform = Platform(platform)
+    except ValueError as e:
+        eprint(f'Error: {str(e)}')
+        exit(1)
 
     doc = article.read_doc()
 
+    if platform not in platform_processes:
+        eprint(f"Error: no process defined for platform '{platform.value}'")
+        exit(1)
     process = platform_processes[platform]
 
     for t in process.transfers:
@@ -142,4 +173,4 @@ def publish(article: Article, platform: Optional[str], to: Optional[str]):
 
 if __name__ == '__main__':
     article_path = get_bloomstore() / 'LeetCode 例题精讲/03-从二叉树遍历到回溯算法'
-    publish(Article.open(article_path), platform=Platform.Xiaozhuanlan)
+    publish(Article.open(article_path), platform='xzl')
