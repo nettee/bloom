@@ -5,6 +5,7 @@ import fire
 
 from bloom.article import Article
 from bloom.create import init_article, new_article
+from bloom.interact import interact
 from bloom.publish import publish, Platform
 from bloom.upload import upload
 
@@ -26,6 +27,10 @@ class Bloom:
         article_path: Path = Path(article_path)
         article = Article.open(article_path)
         publish(article, platform, to)
+
+    def here(self):
+        # Enter interactive mode
+        interact()
 
 
 def main():

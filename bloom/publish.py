@@ -17,12 +17,22 @@ Save = Callable[[Article, MarkdownDoc], None]
 
 
 class Platform(Enum):
-    Xiaozhuanlan = 'xzl'
-    Juejin = 'juejin'
     WeChat = 'wechat'
-    Hexo = 'hexo'
-    Zhihu = 'zhihu'
+    Xiaozhuanlan = 'xzl'
     LeetCodeCn = 'lcn'
+    Zhihu = 'zhihu'
+    Juejin = 'juejin'
+    Hexo = 'hexo'
+
+    def description(self):
+        return {
+            Platform.WeChat: '微信公众号',
+            Platform.Xiaozhuanlan: '小专栏',
+            Platform.LeetCodeCn: 'LeetCode 题解',
+            Platform.Zhihu: '知乎专栏',
+            Platform.Juejin: '掘金专栏',
+            Platform.Hexo: 'Hexo',
+        }[self]
 
 
 @dataclass
