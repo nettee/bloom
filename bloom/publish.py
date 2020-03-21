@@ -91,8 +91,11 @@ def copy_body(article: Article, doc: MarkdownDoc) -> None:
 
 
 def save_body_to_temp(article: Article, doc: MarkdownDoc) -> None:
-    # TODO
-    print('save_body_to_temp')
+    filename = article.meta.base.docName
+    file = Path.home() / 'Desktop' / filename
+    with file.open('w') as f:
+        print(doc.body_string(), file=f)
+    print(f'document body exported to file {file}')
 
 
 def export_to_hexo(article: Article, doc: MarkdownDoc) -> None:
