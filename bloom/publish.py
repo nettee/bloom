@@ -1,3 +1,4 @@
+import os
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
@@ -95,8 +96,18 @@ def add_hexo_header_lines(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     return doc
 
 
+def add_lcn_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    print('add lcn footer')
+    script_path = os.path.realpath(__file__)
+    project_path = Path(script_path).parent.parent
+    file = project_path / 'snippet' / 'footer' / 'lcn.md'
+    footer = MarkdownDoc.from_file(file)
+    doc.footer = footer.body
+    return doc
+
+
 def copy_body(article: Article, doc: MarkdownDoc) -> None:
-    pyperclip.copy(doc.body_string())
+    pyperclip.copy(doc.full_body_string())
     print('document body copied to clipboard')
 
 
@@ -136,6 +147,7 @@ platform_processes = {
         transfers=[
             transfer_image_uri_as_public,
             group_code_blocks,
+            add_lcn_footer,
         ],
         save=copy_body,
     ),

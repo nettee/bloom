@@ -228,6 +228,17 @@ class MarkdownDoc:
     def title_string(self) -> str:
         return str(Heading(1, self.title))
 
+    def full_body_string(self) -> str:
+        paragraphs = []
+        paragraphs.extend(self.header)
+        if len(self.header) > 0:
+            paragraphs.append(HorizontalRule())
+        paragraphs.extend(self.body)
+        if len(self.footer) > 0:
+            paragraphs.append(HorizontalRule())
+        paragraphs.extend(self.footer)
+        return '\n\n'.join(p.string() for p in paragraphs)
+
     def body_string(self) -> str:
         return '\n\n'.join(p.string() for p in self.body)
 
