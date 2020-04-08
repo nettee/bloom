@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from enum import Enum
@@ -11,7 +12,7 @@ from termcolor import colored
 
 from bloom.config import get_bloomstore, settings
 from bloom.article import Article
-from bloom.markdown import MarkdownDoc, CodeBlock
+from bloom.markdown import MarkdownDoc, CodeBlock, NormalParagraph
 
 Transfer = Callable[[Article, MarkdownDoc], MarkdownDoc]
 Save = Callable[[Article, MarkdownDoc], None]
@@ -71,6 +72,25 @@ def transfer_math_equations_newline(article: Article, doc: MarkdownDoc) -> Markd
         test=lambda line: line.endswith(r'\\'),
         transfer=lambda line: line[:-2] + r'\newline',
     )
+    return doc
+
+
+# 将外链去掉，转化为特殊粗体，用于微信公众号
+def transfer_link_to_bold(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    pattern = re.compile(r'\[(.*?)\]\((.*?)\)')
+
+    for p in doc.body:
+        if not isinstance(p, NormalParagraph):
+            continue
+        for i, line in enumerate(p.lines):
+            m = re.search(pattern, line)
+            if m is None:
+                continue
+            url = m.group(2)
+            if 'mp.weixin.qq.com' in url:
+                continue
+            p.lines[i] = re.sub(pattern, r'<span class="outer-link">\1</span>', line)
+
     return doc
 
 
@@ -140,6 +160,7 @@ platform_processes = {
     Platform.WeChat: PublishProcess(
         transfers=[
             transfer_image_uri_as_public,
+            transfer_link_to_bold,
         ],
         save=copy_body,
     ),
