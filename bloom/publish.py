@@ -5,11 +5,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import List, Callable, Optional, cast
-from urllib.parse import ParseResult
+from urllib.parse import ParseResult, urlencode
 
 import pyperclip
 from termcolor import colored
 
+from bloom.base import get_project_path
 from bloom.config import get_bloomstore, settings
 from bloom.article import Article
 from bloom.markdown import MarkdownDoc, CodeBlock, NormalParagraph
@@ -126,16 +127,49 @@ def add_lcn_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     return doc
 
 
+def add_zhihu_header(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    print('add zhihu header')
+    file = get_project_path() / 'snippet' / 'header' / 'zhihu.md'
+    header = MarkdownDoc.from_file(file)
+    doc.header = header.body
+    return doc
+
+
+def add_zhihu_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    print('add zhihu footer')
+    file = get_project_path() / 'snippet' / 'footer' / 'zhihu.md'
+    footer = MarkdownDoc.from_file(file)
+    doc.footer = footer.body
+    return doc
+
+
 def copy_body(article: Article, doc: MarkdownDoc) -> None:
     pyperclip.copy(doc.full_body_string())
     print('document body copied to clipboard')
 
 
-def save_body_to_temp(article: Article, doc: MarkdownDoc) -> None:
+def replace_math_equations_zhihu(text: str) -> str:
+    def repl_to_image(m: re.Match) -> str:
+        equation = m.group(1)
+        encoded_equation = urlencode({'tex': equation})
+        url = 'https://www.zhihu.com/equation?' + encoded_equation
+        img = f'<img src="{url}" alt="{equation}" class="ee_imgtr_noresize" eeimg="1">'
+        return img
+
+    pattern = r'\$(.*?)\$'
+    return re.sub(pattern, repl_to_image, text)
+
+
+def save_body_to_temp_zhihu(article: Article, doc: MarkdownDoc) -> None:
+    body_string = doc.full_body_string()
+
+    # workaround: replace math equations as zhihu special format
+    body_string = replace_math_equations_zhihu(body_string)
+
     filename = article.meta.base.docName
     file = Path.home() / 'Desktop' / filename
     with file.open('w') as f:
-        print(doc.body_string(), file=f)
+        print(body_string, file=f)
     print(f'document body exported to file {file}')
 
 
@@ -183,8 +217,10 @@ platform_processes = {
     Platform.Zhihu: PublishProcess(
         transfers=[
             transfer_image_uri_as_public,
+            add_zhihu_header,
+            add_zhihu_footer,
         ],
-        save=save_body_to_temp,
+        save=save_body_to_temp_zhihu,
     ),
 }
 
