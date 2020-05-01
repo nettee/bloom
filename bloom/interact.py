@@ -2,12 +2,24 @@ import typing
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
-from bloom import Article
+from bloom import Article, new_article
 from bloom.publish import publish, Platform
 from bloom.upload import upload
 
-Action = typing.Callable[[], None]
+Action = Callable[[], None]
+
+
+def input_while(prompt: str,
+                transform: Callable[[str], str] = lambda s: s.strip(),
+                predicate: Callable[[str], bool] = lambda s: True) -> str:
+    while True:
+        s = input(prompt)
+        s = transform(s)
+        if predicate(s):
+            return s
+        print('输入错误，请重试')
 
 
 @dataclass
@@ -48,6 +60,14 @@ def none_action() -> None:
     print('do nothing')
 
 
+def new_action() -> Action:
+    def new_it():
+        title_cn = input_while('中文标题: ')
+        title_en = input_while('英文标题: ')
+        new_article(directory='.', title_en=title_en, title_cn=title_cn)
+    return new_it
+
+
 def menu_action(menu: Menu) -> Action:
     return lambda: menu.action()
 
@@ -82,6 +102,7 @@ publish_menu = Menu(publish_menu_items())
 
 
 top_menu = Menu([
+    MenuItem(key='0', description='new', action=new_action()),
     MenuItem(key='1', description='upload', action=upload_action()),
     MenuItem(key='2', description='publish', action=menu_action(publish_menu)),
 ])
