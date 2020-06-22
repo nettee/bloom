@@ -16,6 +16,11 @@
   color: #999999;
 }
 
+#nice p .watching {
+  font-size: 15px;
+  float: right;
+}
+
 #nice .outer-link {
   color: #773098;
 }
