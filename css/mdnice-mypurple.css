@@ -11,6 +11,13 @@
  #nice {
 }
 
+#nice p .author {
+  font-size: 15px;
+  color: #999999;
+  display:flex; 
+  justify-content: center;
+}
+
 #nice p .introduction {
   font-size: 15px;
   color: #999999;
