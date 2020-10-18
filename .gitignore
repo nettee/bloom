@@ -10,6 +10,7 @@ dist/
 # Gradle files
 .gradle/
 target/
+build/
 
 # Jetbrains files
 .idea/
