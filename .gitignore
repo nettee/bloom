@@ -1,8 +1,16 @@
-# GoLand files
-.idea/
-
 # Python files
 __pycache__/
 /venv/
 *.egg-info/
 dist/
+
+# Java files
+*.class
+
+# Gradle files
+.gradle/
+target/
+
+# Jetbrains files
+.idea/
+*.iml
