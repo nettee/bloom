@@ -1,0 +1,10 @@
+# Java files
+*.class
+
+# Gradle files
+.gradle/
+target/
+
+# Jetbrains files
+.idea/
+*.iml
