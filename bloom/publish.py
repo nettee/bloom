@@ -46,13 +46,13 @@ class PublishProcess:
 
 def transfer_image_uri_as_public(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     def transfer(uri: str) -> str:
-        base_url_path = settings.image.baseUrlPath
+        base_url_path = settings.image.oss.baseDir
         article_name = article.meta.base.name
         file_name = Path(uri).name
         url_path = Path(base_url_path).joinpath(article_name, file_name)
         url = ParseResult(
             scheme='http',
-            netloc=settings.image.host,
+            netloc=settings.image.oss.publicHost,
             path=str(url_path),
             params='',
             query='',

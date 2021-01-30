@@ -24,7 +24,7 @@ class OssImageSetting:
     baseDir: Optional[str] = field(default='.')
     accessKeyId: Optional[str] = field(default=None)
     accessKeySecret: Optional[str] = field(default=None)
-    publicUrl: Optional[str] = field(default=None)
+    publicHost: Optional[str] = field(default=None)
 
 
 @dataclass
