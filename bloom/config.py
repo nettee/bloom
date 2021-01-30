@@ -9,11 +9,28 @@ bloomstore = '/Users/william/bloomstore'
 
 
 @dataclass
-class ImageSetting:
+class HostImageSetting:
     host: Optional[str] = field(default=None)
     user: Optional[str] = field(default=None)
     baseDir: Optional[str] = field(default='.')
     baseUrlPath: Optional[str] = field(default=None)
+
+
+@dataclass
+class OssImageSetting:
+    region: Optional[str] = field(default=None)
+    bucket: Optional[str] = field(default=None)
+    endpoint: Optional[str] = field(default=None)
+    baseDir: Optional[str] = field(default='.')
+    accessKeyId: Optional[str] = field(default=None)
+    accessKeySecret: Optional[str] = field(default=None)
+    publicUrl: Optional[str] = field(default=None)
+
+
+@dataclass
+class ImageSetting:
+    host: Optional[HostImageSetting] = field(default=None)
+    oss: Optional[OssImageSetting] = field(default=None)
 
 
 @dataclass

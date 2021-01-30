@@ -19,9 +19,9 @@ class Bloom:
     def init(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
         init_article(directory=directory, title_en=en, title_cn=cn)
 
-    def upload(self, directory: str = '.', all=False):
+    def upload(self, directory: str = '.', to: str = 'none', all=False):
         article = Article.open(Path(directory))
-        upload(article, all)
+        upload(article, to, all)
 
     def publish(self, article_path: str, platform: Optional[str] = None, to: Optional[str] = None):
         article_path: Path = Path(article_path)

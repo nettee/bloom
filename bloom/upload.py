@@ -12,20 +12,54 @@ def run_command(command: List[str]):
     run(command)
 
 
-def upload_image_files(article: Article, files: List[Path]):
-    name = article.meta.base.name
-    user = settings.image.user
-    host = settings.image.host
-    target_dir = os.path.join(settings.image.baseDir, name)
+class Uploader:
 
-    mkdir_command = ['ssh', f'{user}@{host}', 'mkdir', '-p', target_dir]
-    scp_command = ['scp', '-r'] + [str(file) for file in files] + [f'{user}@{host}:{target_dir}']
-
-    run_command(mkdir_command)
-    run_command(scp_command)
+    def upload(self, article: Article, files: List[Path]):
+        pass
 
 
-def upload(article: Article, all=False):
+class NowhereUploader(Uploader):
+
+    def upload(self, article: Article, files: List[Path]):
+        print('Upload to nowhere! Please pass the --to parameter')
+
+
+class HostUploader(Uploader):
+
+    def upload(self, article: Article, files: List[Path]):
+        print(f'Uploading {len(files)} files to host...')
+        name = article.meta.base.name
+        user = settings.image.user
+        host = settings.image.host
+        target_dir = os.path.join(settings.image.baseDir, name)
+
+        print('name =', name)
+        print('user =', user)
+        print('host =', host)
+        print('target_dir =', target_dir)
+
+        mkdir_command = ['ssh', f'{user}@{host}', 'mkdir', '-p', target_dir]
+        scp_command = ['scp', '-r'] + [str(file) for file in files] + [f'{user}@{host}:{target_dir}']
+
+        run_command(mkdir_command)
+        run_command(scp_command)
+
+
+class OssUploader(Uploader):
+
+    def upload(self, article: Article, files: List[Path]):
+        print(f'Uploading {len(files)} files to oss...')
+
+
+def get_uploader(to):
+    uploader_class = {
+        'host': HostUploader,
+        'oss': OssUploader,
+    }.get(to, NowhereUploader)
+    return uploader_class()
+
+
+def upload(article: Article, to='nowhere', all=False):
     name = article.meta.base.name
     print(f'Uploading images for {name}...')
 
@@ -38,4 +72,4 @@ def upload(article: Article, all=False):
             if not image_file.exists():
                 print(f'Warning: image `{str(image_file)}` does not exist')
 
-    upload_image_files(article, image_files)
+    get_uploader(to).upload(article, image_files)
