@@ -1,4 +1,5 @@
 import os
+from abc import abstractmethod, ABC
 from pathlib import Path
 from subprocess import run
 from typing import List
@@ -12,8 +13,9 @@ def run_command(command: List[str]):
     run(command)
 
 
-class Uploader:
+class Uploader(ABC):
 
+    @abstractmethod
     def upload(self, article: Article, files: List[Path]):
         pass
 
@@ -48,7 +50,7 @@ class HostUploader(Uploader):
 class OssUploader(Uploader):
 
     def upload(self, article: Article, files: List[Path]):
-        print(f'Uploading {len(files)} files to oss...')
+        print(f'Uploading {len(files)} files to OSS...')
 
 
 def get_uploader(to):
