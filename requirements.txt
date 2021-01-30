@@ -4,3 +4,4 @@ pytest
 pyperclip
 dacite
 termcolor
+oss2

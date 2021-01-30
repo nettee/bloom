@@ -4,6 +4,8 @@ from pathlib import Path
 from subprocess import run
 from typing import List
 
+import oss2
+
 from bloom import Article
 from bloom.config import settings
 
@@ -30,10 +32,11 @@ class HostUploader(Uploader):
 
     def upload(self, article: Article, files: List[Path]):
         print(f'Uploading {len(files)} files to host...')
+
         name = article.meta.base.name
-        user = settings.image.user
-        host = settings.image.host
-        target_dir = os.path.join(settings.image.baseDir, name)
+        user = settings.image.host.user
+        host = settings.image.host.host
+        target_dir = os.path.join(settings.image.host.baseDir, name)
 
         print('name =', name)
         print('user =', user)
@@ -51,6 +54,17 @@ class OssUploader(Uploader):
 
     def upload(self, article: Article, files: List[Path]):
         print(f'Uploading {len(files)} files to OSS...')
+
+        setting = settings.image.oss
+        print('oss setting =', setting)
+
+        auth = oss2.Auth(setting.accessKeyId, setting.accessKeySecret)
+        bucket = oss2.Bucket(auth, setting.endpoint, setting.bucket)
+
+        for file in files:
+            target_path = Path(setting.baseDir) / article.meta.base.name / file.name
+            bucket.put_object_from_file(str(target_path), str(file))
+            print(f'{file} --> {target_path}')
 
 
 def get_uploader(to):
