@@ -1,6 +1,7 @@
 import os
 from abc import abstractmethod, ABC
 from pathlib import Path
+from shutil import copyfile
 from subprocess import run
 from typing import List
 
@@ -61,10 +62,17 @@ class OssUploader(Uploader):
         auth = oss2.Auth(setting.accessKeyId, setting.accessKeySecret)
         bucket = oss2.Bucket(auth, setting.endpoint, setting.bucket)
 
+        article.uploaded_image_path().mkdir(exist_ok=True)
+
         for file in files:
-            target_path = Path(setting.baseDir) / article.meta.base.name / file.name
-            bucket.put_object_from_file(str(target_path), str(file))
-            print(f'{file} --> {target_path}')
+            cached_file = article.uploaded_image_path() / file.name
+            if cached_file.exists() and file.stat().st_mtime <= cached_file.stat().st_mtime:
+                print(f'{file} (not changed)')
+            else:
+                target_path = Path(setting.baseDir) / article.meta.base.name / file.name
+                bucket.put_object_from_file(str(target_path), str(file))
+                print(f'{file} --> {target_path}')
+                copyfile(file, cached_file)
 
 
 def get_uploader(to):

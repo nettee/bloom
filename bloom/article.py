@@ -117,6 +117,7 @@ class Article:
 
     META_FILE_NAME = 'meta.toml'
     IMAGE_DIR_NAME = 'img'
+    UPLOADED_IMAGE_DIR_NAME = 'img_uploaded'
 
     @classmethod
     def create(cls, path:Path, meta: MetaInfo) -> Article:
@@ -135,6 +136,9 @@ class Article:
 
     def image_path(self) -> Path:
         return self.path_to(Article.IMAGE_DIR_NAME)
+
+    def uploaded_image_path(self) -> Path:
+        return self.path_to(Article.UPLOADED_IMAGE_DIR_NAME)
 
     def path_to(self, sub_path: Union[str, Path]) -> Path:
         return self.path / sub_path
