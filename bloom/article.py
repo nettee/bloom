@@ -106,9 +106,6 @@ class Article:
     path: Path
     meta: MetaInfo = field(repr=False)
 
-    IMAGE_DIR_NAME = 'img'
-    UPLOADED_IMAGE_DIR_NAME = 'img_uploaded'
-
     @classmethod
     def create(cls, path: Path, meta: MetaInfo) -> Article:
         return Article(path, meta)
@@ -122,17 +119,17 @@ class Article:
         d = dataclasses.asdict(self.meta)
         print_config(d)
 
-    def _meta_path(self) -> Path:
-        return self.path / settings.article.metaFileName
+    def meta_path(self) -> Path:
+        return self.path_to(settings.article.metaFileName)
 
     def doc_path(self) -> Path:
         return self.path_to(self.meta.base.docName)
 
     def image_path(self) -> Path:
-        return self.path_to(Article.IMAGE_DIR_NAME)
+        return self.path_to(settings.article.imageDirName)
 
     def uploaded_image_path(self) -> Path:
-        return self.path_to(Article.UPLOADED_IMAGE_DIR_NAME)
+        return self.path_to(settings.article.uploadedImageDirName)
 
     def path_to(self, sub_path: Union[str, Path]) -> Path:
         return self.path / sub_path
@@ -154,7 +151,7 @@ class Article:
 
     def save_meta(self) -> None:
         self._mkdir()
-        self.meta.save_to_file(self._meta_path())
+        self.meta.save_to_file(self.meta_path())
 
     def save_doc(self, doc: MarkdownDoc) -> None:
         self._mkdir()

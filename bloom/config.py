@@ -15,6 +15,8 @@ bloomstore = '/Users/william/bloomstore'
 @dataclass
 class ArticleSetting:
     metaFileName: Optional[str] = field(default='meta.yml')
+    imageDirName: Optional[str] = field(default='img')
+    uploadedImageDirName: Optional[str] = field(default='img_uploaded')
 
 
 @dataclass
