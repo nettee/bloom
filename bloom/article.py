@@ -135,7 +135,8 @@ class Article:
         return Article(path, meta)
 
     def status(self):
-        print(self.meta)
+        d = dataclasses.asdict(self.meta)
+        print_config(d)
 
     def meta_path(self) -> Path:
         return self.path / Article.META_FILE_NAME
