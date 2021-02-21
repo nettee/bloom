@@ -6,6 +6,7 @@ from typing import List, Callable, Optional
 from urllib.parse import urlparse
 
 from bloom.article import Article, MetaInfo, BaseInfo, TranslationInfo, GoldMinerTranslationInfo
+from bloom.config import settings
 from bloom.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
 
 
@@ -129,6 +130,18 @@ def save_to_bloom(article: Article, doc: MarkdownDoc) -> None:
     article.save_doc(doc)
 
 
+def import_docs(process: ImportProcess, doc_files: List[Path], dest: Path) -> None:
+    for file in doc_files:
+        doc = process.fetch(file)
+        meta = process.extract(doc)
+        article = process.construct(dest, meta)
+
+        for transfer in process.transfers:
+            doc = transfer(article, doc)
+
+        process.save(article, doc)
+
+
 gold_miner_process = ImportProcess(
     fetch=MarkdownDoc.from_file,
     extract=extract_meta,
@@ -142,30 +155,19 @@ gold_miner_process = ImportProcess(
 )
 
 
-def import_from_gold_miner(doc_files: List[Path], dest: Path) -> None:
-
-    process = gold_miner_process
-
-    for file in doc_files:
-        doc = process.fetch(file)
-        meta = process.extract(doc)
-        article = process.construct(dest, meta)
-
-        for transfer in process.transfers:
-            doc = transfer(article, doc)
-
-        process.save(article, doc)
+def import_from_gold_miner(doc_files: List[Path]) -> None:
+    dest = Path(settings.bloomstore) / '掘金翻译计划'
+    import_docs(gold_miner_process, doc_files, dest)
 
 
 if __name__ == '__main__':
+    gold_miner_project_dir = Path.home() / 'projects' / 'gold-miner'
     files = [
-        'tutorial-write-a-shell-in-c.md',
-        'writing-a-microservice-in-rust.md',
-        'retries-timeouts-backoff.md',
-        'blazingly-fast-parsing-part-1-optimizing-the-scanner.md',
-        'how_to_prep_your_github_for_job_seeking.md',
+        'TODO1/tutorial-write-a-shell-in-c.md',
+        'TODO1/writing-a-microservice-in-rust.md',
+        'TODO1/retries-timeouts-backoff.md',
+        'TODO1/blazingly-fast-parsing-part-1-optimizing-the-scanner.md',
+        'TODO1/how_to_prep_your_github_for_job_seeking.md',
     ]
-    dir = Path('/home/william/projects/gold-miner/TODO1/')
-    docs = [dir / file for file in files]
-    dest = Path('/home/william/bloomstore/掘金翻译计划')
-    import_from_gold_miner(docs, dest)
+    docs = [gold_miner_project_dir / file for file in files]
+    import_from_gold_miner(docs)
