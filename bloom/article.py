@@ -7,12 +7,19 @@ from enum import Enum
 from pathlib import Path
 from typing import List, Union, Optional, Any, Tuple
 
-import toml
 import yaml
 from dacite import from_dict
 
 from bloom.common import print_config
 from bloom.markdown import MarkdownDoc
+
+
+def represent_none(self, _):
+    return self.represent_scalar('tag:yaml.org,2002:null', '')
+
+
+# tell pyyaml to serialize None as ''
+yaml.add_representer(type(None), represent_none)
 
 
 class Category(Enum):
@@ -95,8 +102,10 @@ class MetaInfo:
         self.save_to_file(directory / Article.META_FILE_NAME)
 
     def save_to_file(self, file: Path) -> None:
+        print(f'Save article meta to {file}')
+        data = asdict(self)
         with file.open('w') as f:
-            toml.dump(asdict(self, dict_factory=toml_dict_factory), f)
+            yaml.dump(data, f, allow_unicode=True)
 
 
 META_FILENAMES = ('meta.yml', 'meta.yaml', 'meta.toml')
@@ -121,7 +130,7 @@ class Article:
     path: Path
     meta: MetaInfo = field(repr=False)
 
-    META_FILE_NAME = 'meta.toml'
+    META_FILE_NAME = 'meta.yml'
     IMAGE_DIR_NAME = 'img'
     UPLOADED_IMAGE_DIR_NAME = 'img_uploaded'
 
