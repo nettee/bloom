@@ -1,10 +1,12 @@
+import dataclasses
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-import toml
+import yaml
 from dacite import from_dict
 
+SETTING_FILES = ('settings.yml', 'settings.yaml', 'settings.toml')
 bloomstore = '/Users/william/bloomstore'
 
 
@@ -29,6 +31,7 @@ class OssImageSetting:
 
 @dataclass
 class ImageSetting:
+    default: str
     host: Optional[HostImageSetting] = field(default=None)
     oss: Optional[OssImageSetting] = field(default=None)
 
@@ -39,25 +42,44 @@ class Setting:
     image: ImageSetting
 
 
-SETTINGS_FILE: Path = Path.home() / '.bloom' / 'settings.toml'
 settings: Optional[Setting] = None
 
 
+def find_settings_file() -> Path:
+    settings_dir = Path.home() / '.bloom'
+    for filename in SETTING_FILES:
+        settings_file = settings_dir / filename
+        if settings_file.exists():
+            print(f'Load bloom settings from {settings_file}')
+            return settings_file
+    print('Bloom settings not found. Quit.')
+    exit(1)
+
+
 def load_settings():
-    print(f'Load bloom settings from {SETTINGS_FILE}')
-    with SETTINGS_FILE.open('r') as f:
-        data = toml.load(f)
+    settings_file = find_settings_file()
+    with settings_file.open('r') as f:
+        data = yaml.load(f, Loader=yaml.CLoader)
         global settings
         settings = from_dict(data_class=Setting, data=data)
 
 
 # Load settings on import
-if SETTINGS_FILE.exists():
-    load_settings()
+load_settings()
+
+
+def pretty_print_dict(d: dict, prefix: str = ''):
+    for k, v in d.items():
+        key = k if prefix == '' else f'{prefix}.{k}'
+        if isinstance(v, dict):
+            pretty_print_dict(v, key)
+        else:
+            print(f'{key}={v}')
 
 
 def list_settings():
-    print(settings)
+    d = dataclasses.asdict(settings)
+    pretty_print_dict(d)
 
 
 def get_bloomstore() -> Path:
@@ -68,4 +90,4 @@ def get_bloomstore() -> Path:
 
 
 if __name__ == '__main__':
-    load_settings()
+    list_settings()
