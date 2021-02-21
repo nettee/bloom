@@ -112,6 +112,23 @@ class MetaInfo:
             toml.dump(asdict(self, dict_factory=toml_dict_factory), f)
 
 
+META_FILENAMES = ('meta.yml', 'meta.yaml', 'meta.toml')
+
+
+def _find_meta_file(article_path: Path) -> Path:
+    for filename in META_FILENAMES:
+        meta_file = article_path / filename
+        if meta_file.exists():
+            print(f'Load article meta from {meta_file}')
+            return meta_file
+    raise RuntimeError(f'article meta not found in {article_path}')
+
+
+def _read_meta_info(article_path: Path):
+    meta_path = _find_meta_file(article_path)
+    return MetaInfo.read(meta_path)
+
+
 @dataclass
 class Article:
     path: Path
@@ -127,7 +144,7 @@ class Article:
 
     @classmethod
     def open(cls, path: Path) -> Article:
-        meta = MetaInfo.read(path / Article.META_FILE_NAME)
+        meta = _read_meta_info(path)
         return Article(path, meta)
 
     def status(self):

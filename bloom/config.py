@@ -8,7 +8,7 @@ from dacite import from_dict
 
 from bloom.common import print_config
 
-SETTING_FILES = ('settings.yml', 'settings.yaml', 'settings.toml')
+SETTING_FILENAMES = ('settings.yml', 'settings.yaml', 'settings.toml')
 bloomstore = '/Users/william/bloomstore'
 
 
@@ -49,7 +49,7 @@ settings: Optional[Setting] = None
 
 def find_settings_file() -> Path:
     settings_dir = Path.home() / '.bloom'
-    for filename in SETTING_FILES:
+    for filename in SETTING_FILENAMES:
         settings_file = settings_dir / filename
         if settings_file.exists():
             print(f'Load bloom settings from {settings_file}')
