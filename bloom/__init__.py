@@ -3,6 +3,7 @@ from typing import Optional
 
 import fire
 
+from bloom import config
 from bloom.article import Article
 from bloom.create import init_article, new_article
 from bloom.interact import interact
@@ -12,6 +13,10 @@ from bloom.upload import upload
 
 class Bloom:
     """Blog output manager"""
+
+    def config(self, list: Optional[bool] = False):
+        if list:
+            config.list_settings()
 
     def new(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
         new_article(directory=directory, title_en=en, title_cn=cn)

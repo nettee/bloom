@@ -56,6 +56,10 @@ if SETTINGS_FILE.exists():
     load_settings()
 
 
+def list_settings():
+    print(settings)
+
+
 def get_bloomstore() -> Path:
     path = Path(settings.bloomstore)
     if not path.exists():
