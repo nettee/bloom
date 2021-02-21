@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import List, Union, Optional, Any, Tuple
 
 import toml
+import yaml
+from dacite import from_dict
 
 from bloom.common import print_config
 from bloom.markdown import MarkdownDoc
@@ -21,7 +23,6 @@ class Category(Enum):
         return Category.Article
 
 
-# TOML table
 @dataclass
 class BaseInfo:
     name: str
@@ -29,27 +30,20 @@ class BaseInfo:
     titleEn: str
     titleCn: str
     createTime: datetime = field(default=datetime.now())
-    category: Category = field(default=Category.Article)
+    category: str = field(default='article')
     tags: List[str] = field(default_factory=list)
 
-    def __post_init__(self) -> None:
-        if isinstance(self.category, str):
-            self.category = Category(self.category)
 
-
-# TOML table
 @dataclass
 class HexoInfo:
     readMore: int = field(default=6)
 
 
-# TOML table
 @dataclass
 class GoldMinerTranslationInfo:
     postUrl: str
 
 
-# TOML table
 @dataclass
 class TranslationInfo:
     originalUrl: Optional[str] = field(default=None)
@@ -89,18 +83,11 @@ class MetaInfo:
     hexo: Optional[HexoInfo] = field(default=None)
     translation: Optional[TranslationInfo] = field(default=None)
 
-    # TODO remove this, use from_dict
-    def __post_init__(self):
-        if isinstance(self.base, dict):
-            self.base = BaseInfo(**self.base)
-        if isinstance(self.hexo, dict):
-            self.hexo = HexoInfo(**self.hexo)
-
     @staticmethod
     def read(file: Path):
         with file.open('r') as f:
-            t = toml.load(f)
-            meta = MetaInfo(**t)
+            data = yaml.load(f, Loader=yaml.CLoader)
+            meta = from_dict(data_class=MetaInfo, data=data)
         return meta
 
     def save_to_directory(self, directory: Path) -> None:
