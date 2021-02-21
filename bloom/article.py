@@ -84,21 +84,17 @@ class MetaInfo:
             yaml.dump(data, f, allow_unicode=True)
 
 
-META_FILENAMES = ('meta.yml', 'meta.yaml', 'meta.toml')
-
-
 def _find_meta_file(article_path: Path) -> Path:
-    for filename in META_FILENAMES:
-        meta_file = article_path / filename
-        if meta_file.exists():
-            print(f'Load article meta from {meta_file}')
-            return meta_file
-    raise RuntimeError(f'article meta not found in {article_path}')
+    meta_file = article_path / settings.article.metaFileName
+    if not meta_file.exists():
+        raise RuntimeError(f'article meta not found in {article_path}')
+    return meta_file
 
 
 def _read_meta_info(article_path: Path):
-    meta_path = _find_meta_file(article_path)
-    return MetaInfo.read(meta_path)
+    meta_file = _find_meta_file(article_path)
+    print(f'Load article meta from {meta_file}')
+    return MetaInfo.read(meta_file)
 
 
 @dataclass

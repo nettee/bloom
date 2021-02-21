@@ -8,8 +8,7 @@ from dacite import from_dict
 
 from bloom.common import print_config
 
-SETTING_FILENAMES = ('settings.yml', 'settings.yaml', 'settings.toml')
-bloomstore = '/Users/william/bloomstore'
+SETTING_FILENAMES = ('settings.yml', 'settings.yaml')
 
 
 @dataclass
