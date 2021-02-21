@@ -1,4 +1,5 @@
 import re
+import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -125,9 +126,12 @@ def extract_title(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
 
 
 def save_to_bloom(article: Article, doc: MarkdownDoc) -> None:
-    print(f'Save article {article.path}')
+    if article.path.exists():
+        print(f'Error: article path already exists: {article.path}', file=sys.stderr)
+        return
     article.save_meta()
     article.save_doc(doc)
+    print(f'Saved article {article.path}')
 
 
 def import_docs(process: ImportProcess, doc_files: List[Path], dest: Path) -> None:
@@ -168,6 +172,8 @@ if __name__ == '__main__':
         'TODO1/retries-timeouts-backoff.md',
         'TODO1/blazingly-fast-parsing-part-1-optimizing-the-scanner.md',
         'TODO1/how_to_prep_your_github_for_job_seeking.md',
+        'TODO1/real-world-dynamic-programming-seam-carving.md',
+        'article/2021/why-the-service-mesh-should-fade-out-of-sight.md',
     ]
     docs = [gold_miner_project_dir / file for file in files]
     import_from_gold_miner(docs)

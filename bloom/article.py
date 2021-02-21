@@ -78,10 +78,10 @@ class MetaInfo:
         self.save_to_file(directory / settings.article.metaFileName)
 
     def save_to_file(self, file: Path) -> None:
-        print(f'Save article meta to {file}')
         data = asdict(self)
         with file.open('w') as f:
             yaml.dump(data, f, allow_unicode=True)
+        print(f'Saved article meta {file}')
 
 
 def _find_meta_file(article_path: Path) -> Path:
