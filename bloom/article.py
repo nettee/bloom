@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from enum import Enum
@@ -8,6 +9,7 @@ from typing import List, Union, Optional, Any, Tuple
 
 import toml
 
+from bloom.common import print_config
 from bloom.markdown import MarkdownDoc
 
 
@@ -120,13 +122,16 @@ class Article:
     UPLOADED_IMAGE_DIR_NAME = 'img_uploaded'
 
     @classmethod
-    def create(cls, path:Path, meta: MetaInfo) -> Article:
+    def create(cls, path: Path, meta: MetaInfo) -> Article:
         return Article(path, meta)
 
     @classmethod
     def open(cls, path: Path) -> Article:
         meta = MetaInfo.read(path / Article.META_FILE_NAME)
         return Article(path, meta)
+
+    def status(self):
+        print(self.meta)
 
     def meta_path(self) -> Path:
         return self.path / Article.META_FILE_NAME

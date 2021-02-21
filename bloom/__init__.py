@@ -24,6 +24,10 @@ class Bloom:
     def init(self, directory: str = '.', en: Optional[str] = None, cn: Optional[str] = None):
         init_article(directory=directory, title_en=en, title_cn=cn)
 
+    def status(self, directory: str = '.'):
+        article = Article.open(Path(directory))
+        article.status()
+
     def upload(self, directory: str = '.', to: str = 'none', all=False):
         article = Article.open(Path(directory))
         upload(article, to, all)

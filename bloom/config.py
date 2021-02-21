@@ -6,6 +6,8 @@ from typing import Optional
 import yaml
 from dacite import from_dict
 
+from bloom.common import print_config
+
 SETTING_FILES = ('settings.yml', 'settings.yaml', 'settings.toml')
 bloomstore = '/Users/william/bloomstore'
 
@@ -68,18 +70,9 @@ def load_settings():
 load_settings()
 
 
-def pretty_print_dict(d: dict, prefix: str = ''):
-    for k, v in d.items():
-        key = k if prefix == '' else f'{prefix}.{k}'
-        if isinstance(v, dict):
-            pretty_print_dict(v, key)
-        else:
-            print(f'{key}={v}')
-
-
 def list_settings():
     d = dataclasses.asdict(settings)
-    pretty_print_dict(d)
+    print_config(d)
 
 
 def get_bloomstore() -> Path:
