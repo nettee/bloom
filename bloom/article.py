@@ -59,31 +59,6 @@ class TranslationInfo:
     goldMiner: Optional[GoldMinerTranslationInfo] = field(default=None)
 
 
-DictItems = List[Tuple[str, Any]]
-
-
-def toml_dict_factory(items: DictItems) -> dict:
-    """
-    Serialize values of obscure types (e.g. Category) in toml.dump().
-    The dict factory will be called multiple times for a TOML document.
-    """
-    normal_types = {type(None), bool, int, float, str, datetime, list, dict}
-
-    def serialize(v: Any) -> Any:
-        if type(v) in normal_types:
-            return v
-        elif isinstance(v, Enum):
-            return v.value
-        else:
-            return str(v)
-
-    # TODO deal with nested obscure type in array
-    new_items = [(key, serialize(value)) for (key, value) in items]
-
-    return dict(new_items)
-
-
-# TOML document
 @dataclass
 class MetaInfo:
     base: BaseInfo

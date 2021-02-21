@@ -25,7 +25,7 @@ def build_meta(title_en: Optional[str] = None, title_cn: Optional[str] = None):
 # Steps:
 # 1. Create article directory
 # 2. Create markdown file (empty)
-# 3. Create meta.toml file
+# 3. Create meta.yml file
 def new_article(directory: str = '.', title_en: Optional[str] = None, title_cn: Optional[str] = None):
     meta = build_meta(title_en, title_cn)
 
@@ -41,7 +41,7 @@ def new_article(directory: str = '.', title_en: Optional[str] = None, title_cn: 
     meta.save_to_directory(article_dir)
 
 
-# Create meta.toml file only
+# Create meta.yml file only
 def init_article(directory: str = '.', title_en: Optional[str] = None, title_cn: Optional[str] = None):
     meta = build_meta(title_en, title_cn)
 
