@@ -13,6 +13,11 @@ bloomstore = '/Users/william/bloomstore'
 
 
 @dataclass
+class ArticleSetting:
+    metaFileName: Optional[str] = field(default='meta.yml')
+
+
+@dataclass
 class HostImageSetting:
     host: Optional[str] = field(default=None)
     user: Optional[str] = field(default=None)
@@ -41,7 +46,8 @@ class ImageSetting:
 @dataclass
 class Setting:
     bloomstore: str
-    image: ImageSetting
+    article: Optional[ArticleSetting] = field(default=None)
+    image: Optional[ImageSetting] = field(default=None)
 
 
 settings: Optional[Setting] = None

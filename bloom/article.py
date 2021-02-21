@@ -11,6 +11,7 @@ import yaml
 from dacite import from_dict
 
 from bloom.common import print_config
+from bloom.config import settings
 from bloom.markdown import MarkdownDoc
 
 
@@ -74,7 +75,7 @@ class MetaInfo:
 
     def save_to_directory(self, directory: Path) -> None:
         assert directory.is_dir()
-        self.save_to_file(directory / Article.META_FILE_NAME)
+        self.save_to_file(directory / settings.article.metaFileName)
 
     def save_to_file(self, file: Path) -> None:
         print(f'Save article meta to {file}')
@@ -105,7 +106,6 @@ class Article:
     path: Path
     meta: MetaInfo = field(repr=False)
 
-    META_FILE_NAME = 'meta.yml'
     IMAGE_DIR_NAME = 'img'
     UPLOADED_IMAGE_DIR_NAME = 'img_uploaded'
 
@@ -122,8 +122,8 @@ class Article:
         d = dataclasses.asdict(self.meta)
         print_config(d)
 
-    def meta_path(self) -> Path:
-        return self.path / Article.META_FILE_NAME
+    def _meta_path(self) -> Path:
+        return self.path / settings.article.metaFileName
 
     def doc_path(self) -> Path:
         return self.path_to(self.meta.base.docName)
@@ -154,7 +154,7 @@ class Article:
 
     def save_meta(self) -> None:
         self._mkdir()
-        self.meta.save_to_file(self.meta_path())
+        self.meta.save_to_file(self._meta_path())
 
     def save_doc(self, doc: MarkdownDoc) -> None:
         self._mkdir()
