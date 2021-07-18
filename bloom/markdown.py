@@ -134,6 +134,7 @@ class Quote(Paragraph):
             left.append('')
             left.extend(right)
             return left
+
         lines = reduce(f, (p.line_strings() for p in self.paragraphs))
         return ['> ' + line for line in lines]
 
@@ -190,6 +191,10 @@ class ReadMore(Paragraph):
 
 @dataclass
 class MarkdownDoc:
+    path: Path = field(default=None)  # 临时变量
+    """
+    表示一个 Markdown 文档的内容，不包括文件信息
+    """
     title: str = field(default='')
     body: List[Paragraph] = field(default_factory=list)
     header: List[Paragraph] = field(default_factory=list)
@@ -199,7 +204,9 @@ class MarkdownDoc:
     def from_file(file: Path) -> MarkdownDoc:
         with file.open('r') as f:
             lines = f.readlines()
-            return MarkdownDoc.from_lines([line.strip('\n') for line in lines])
+            markdown_doc = MarkdownDoc.from_lines([line.strip('\n') for line in lines])
+        markdown_doc.path = file  # TODO delete this
+        return markdown_doc
 
     @staticmethod
     def from_string(content: str) -> MarkdownDoc:
@@ -292,6 +299,13 @@ class MarkdownDoc:
             i = j
         return res
 
+    def remove_if(self, test: ParagraphPredicate) -> None:
+        new_body = []
+        for p in self.body:
+            if not test(p):
+                new_body.append(p)
+        self.body = new_body
+
     def remove_start(self, test: ParagraphPredicate) -> Optional[Paragraph]:
         if len(self.body) > 0 and test(self.body[0]):
             res = self.body[0]
@@ -321,7 +335,7 @@ class MarkdownDoc:
 
     def remove_end_while(self, test: ParagraphPredicate) -> List[Paragraph]:
         i = len(self.body)
-        while i > 0 and test(self.body[i-1]):
+        while i > 0 and test(self.body[i - 1]):
             i -= 1
         res = self.body[i:]
         self.body = self.body[:i]

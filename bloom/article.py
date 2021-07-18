@@ -35,8 +35,8 @@ class Category(Enum):
 class BaseInfo:
     name: str
     docName: str
-    titleEn: str
-    titleCn: str
+    titleEn: str = field(default=None)
+    titleCn: str = field(default=None)
     createTime: datetime = field(default=datetime.now())
     category: str = field(default='article')
     tags: List[str] = field(default_factory=list)

@@ -1,6 +1,7 @@
 import re
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
 from typing import List, Callable, Optional
@@ -8,7 +9,7 @@ from urllib.parse import urlparse
 
 from bloom.article import Article, MetaInfo, BaseInfo, TranslationInfo, GoldMinerTranslationInfo
 from bloom.config import settings
-from bloom.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule
+from bloom.markdown import MarkdownDoc, Quote, Link, Heading, HorizontalRule, NormalParagraph
 
 
 class Platform(Enum):
@@ -51,8 +52,7 @@ def extract_all_links(line: str) -> List[Link]:
     return links
 
 
-def extract_meta(doc: MarkdownDoc) -> MetaInfo:
-
+def extract_meta_gold_minor_translation(doc: MarkdownDoc) -> MetaInfo:
     name = None
     doc_name = None
     title_en = None
@@ -103,6 +103,34 @@ def extract_meta(doc: MarkdownDoc) -> MetaInfo:
     )
 
 
+def extract_meta_hexo_post(doc: MarkdownDoc) -> MetaInfo:
+    base_dict = {
+        'name': doc.path.stem,
+        'docName': doc.path.name,
+    }
+
+    meta_paragraph = doc.remove_start(lambda p: isinstance(p, NormalParagraph))
+    meta_string = meta_paragraph.string()
+
+    m1 = re.search(r'^title:\s*(.+)$', meta_string, re.MULTILINE)
+    if m1 is not None:
+        title_cn = m1.group(1)
+        base_dict['titleCn'] = title_cn
+    m2 = re.search(r'^date:\s*(.+)$', meta_string, re.MULTILINE)
+    if m2 is not None:
+        create_time = m2.group(1)
+        create_time = datetime.strptime(create_time, '%Y-%m-%d %H:%M:%S')
+        create_time = create_time.astimezone()
+        base_dict['createTime'] = create_time
+    m3 = re.search(r'^tags:\s*\[(.*)]$', meta_string, re.MULTILINE)
+    if m3 is not None:
+        tags_string = m3.group(1)
+        tags = re.split(r',\s*', tags_string)
+        base_dict['tags'] = tags
+
+    return MetaInfo(base=BaseInfo(**base_dict))
+
+
 def construct_article(dest: Path, meta: MetaInfo) -> Article:
     article_path = dest / meta.base.titleCn
     return Article(path=article_path, meta=meta)
@@ -118,10 +146,21 @@ def remove_footer(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     return doc
 
 
-def extract_title(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+def remove_hexo_read_more(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    doc.remove_if(lambda p: isinstance(p, NormalParagraph) and p.string().startswith('<!--'))
+    return doc
+
+
+def extract_title_from_heading(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
     heading1 = doc.remove_start(lambda p: isinstance(p, Heading) and p.level == 1)
     if heading1 is not None:
         doc.title = heading1.text
+    return doc
+
+
+def extract_title_from_meta(article: Article, doc: MarkdownDoc) -> MarkdownDoc:
+    title = article.meta.base.titleCn
+    doc.title = title
     return doc
 
 
@@ -148,12 +187,23 @@ def import_docs(process: ImportProcess, doc_files: List[Path], dest: Path) -> No
 
 gold_miner_process = ImportProcess(
     fetch=MarkdownDoc.from_file,
-    extract=extract_meta,
+    extract=extract_meta_gold_minor_translation,
     construct=construct_article,
     transfers=[
         extract_gold_miner_header,
         remove_footer,
-        extract_title,
+        extract_title_from_heading,
+    ],
+    save=save_to_bloom,
+)
+
+hexo_process = ImportProcess(
+    fetch=MarkdownDoc.from_file,
+    extract=extract_meta_hexo_post,
+    construct=construct_article,
+    transfers=[
+        remove_hexo_read_more,
+        extract_title_from_meta,
     ],
     save=save_to_bloom,
 )
@@ -164,16 +214,15 @@ def import_from_gold_miner(doc_files: List[Path]) -> None:
     import_docs(gold_miner_process, doc_files, dest)
 
 
+def import_from_hexo(doc_files: List[Path]) -> None:
+    dest = Path(settings.bloomstore) / 'blog1'
+    import_docs(hexo_process, doc_files, dest)
+
+
 if __name__ == '__main__':
-    gold_miner_project_dir = Path.home() / 'projects' / 'gold-miner'
+    hexo_blog_post_dir = Path.home() / 'projects' / 'nettee.github.io' / 'source/_posts'
     files = [
-        'TODO1/tutorial-write-a-shell-in-c.md',
-        'TODO1/writing-a-microservice-in-rust.md',
-        'TODO1/retries-timeouts-backoff.md',
-        'TODO1/blazingly-fast-parsing-part-1-optimizing-the-scanner.md',
-        'TODO1/how_to_prep_your_github_for_job_seeking.md',
-        'TODO1/real-world-dynamic-programming-seam-carving.md',
-        'article/2021/why-the-service-mesh-should-fade-out-of-sight.md',
+        'OkHttp-Interceptors-and-Chain-of-Responsibility-Pattern.md',
     ]
-    docs = [gold_miner_project_dir / file for file in files]
-    import_from_gold_miner(docs)
+    docs = [hexo_blog_post_dir / file for file in files]
+    import_from_hexo(docs)
