@@ -33,13 +33,13 @@ class Category(Enum):
 
 @dataclass
 class BaseInfo:
-    name: str
-    docName: str
-    titleEn: str = field(default=None)
-    titleCn: str = field(default=None)
-    createTime: datetime = field(default=datetime.now())
-    category: str = field(default='article')
-    tags: List[str] = field(default_factory=list)
+    name: str  # 文章唯一标识，不含空格
+    docName: str  # Markdown 文档文件名
+    titleEn: str = field(default=None)  # 英文标题
+    titleCn: str = field(default=None)  # 中文标题
+    createTime: datetime = field(default=datetime.now())  # 创建时间
+    category: str = field(default='article')  # 文章类型（保留字段）
+    tags: List[str] = field(default_factory=list)  # 文章标签
 
 
 @dataclass
@@ -62,9 +62,9 @@ class TranslationInfo:
 
 @dataclass
 class MetaInfo:
-    base: BaseInfo
-    hexo: Optional[HexoInfo] = field(default=None)
-    translation: Optional[TranslationInfo] = field(default=None)
+    base: BaseInfo  # 基本信息
+    hexo: Optional[HexoInfo] = field(default=None)  # Hexo 博客文章元信息
+    translation: Optional[TranslationInfo] = field(default=None)  # 掘金翻译计划文章元信息
 
     @staticmethod
     def read(file: Path):
@@ -152,5 +152,3 @@ class Article:
     def save_doc(self, doc: MarkdownDoc) -> None:
         self._mkdir()
         doc.save(self.doc_path())
-
-
