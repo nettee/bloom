@@ -1,7 +1,0 @@
-fire
-pyyaml
-pytest
-pyperclip
-dacite
-termcolor
-oss2
