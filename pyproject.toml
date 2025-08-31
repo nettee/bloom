@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bloom"
+version = "0.1.0"
+description = "博客写作助手工具 - 支持URL slug生成和图片上传"
+authors = [
+    { name = "nettee" }
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "openai>=1.0.0",
+    "python-frontmatter>=1.0.0",
+    "click>=8.0.0",
+    "boto3>=1.26.0",
+    "botocore>=1.29.0",
+    "httpx[socks]>=0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "isort>=5.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+bloom = "bloom.main:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bloom"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
